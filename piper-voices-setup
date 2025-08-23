@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# . ./include.sh
+
+set -e
+
+#!/usr/bin/env bash
+# Install/update selected Piper voices with git sparse checkout.
+# Destination: ~/.local/share/piper/voices
+
+set -euo pipefail
+
+DEST="${HOME}/.local/share/piper/voices"
+REPO="https://huggingface.co/rhasspy/piper-voices"
+
+VOICES=(
+  "en/en_GB/cori/high"                       # UK female (high)
+  "en/en_GB/alan/medium"                     # UK male (medium)
+  "en/en_GB/northern_english_male/medium"    # UK male regional (medium)
+  "en/en_US/ryan/high"                       # US male (high)
+  "en/en_US/amy/medium"                      # US female (medium)
+  "en/en_US/lessac/high"                     # US female (high)
+  # "nl/nl_BE/nathalie/medium"                 # BE Dutch female (medium)
+  # "nl/nl_BE/nathalie/medium"                 # BE Dutch female (medium, English-capable)
+)
+
+mkdir -p "$DEST"
+
+if [ ! -d "${DEST}/.git" ]; then
+  echo "Cloning Piper voices repo into $DEST ..."
+  git clone --depth=1 --filter=blob:none --sparse "$REPO" "$DEST"
+  cd "$DEST"
+  git sparse-checkout set --no-cone "${VOICES[@]}"
+else
+  echo "Updating existing voices repo in $DEST ..."
+  cd "$DEST"
+  git pull --depth=1
+  git sparse-checkout set --no-cone "${VOICES[@]}"
+fi
+
+echo "Voices installed under: $DEST"

@@ -1,0 +1,4 @@
+[submodule "shell-and-scripting-helpers"]
+	path = shell-and-scripting-helpers
+	url = https://github.com/tigger04/shell-and-scripting-helpers
+	branch = master
