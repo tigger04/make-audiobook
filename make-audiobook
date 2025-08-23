@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #shellcheck source=shell-and-scripting-helpers/.qfuncs.sh
-source shell-and-scripting-helpers/.qfuncs.sh
+source ~/.qfuncs.sh
 
 set -e -o pipefail
 shopt -s dotglob lastpipe
