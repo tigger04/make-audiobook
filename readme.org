@@ -1,46 +1,52 @@
 * make-audiobook
 
-This project provides a Bash script to convert text files into audiobooks using Piper TTS, with support for batch processing and ID3 tagging.
+A script to convert ebooks or any other long documents into audiobooks using Piper TTS, with support for batch processing and ID3 tagging.
 
 ** Features
 - Converts one or more text files to MP3 audiobooks using Piper TTS
 - Supports batch processing
-- Optionally add ID3 metadata (author, book title, track number)
-- Selects voices interactively or randomly
+- Optionally add ID3 metadata (author, book title, track number can be calculated from file name)
+- Select voices interactively or randomly
 
 ** Requirements
 - Piper TTS (https://github.com/rhasspy/piper)
 - ffmpeg
 - pandoc
 - fzf (for interactive voice selection)
+- bash v5.0 or higher
 
 ** Usage
-#+BEGIN_SRC bash
-./make-audiobook [OPTIONS] TEXT_FILE [TEXT_FILE2 ...]
-#+END_SRC
+	#+begin_src bash
+	./make-audiobook [OPTIONS] TEXT_FILE [TEXT_FILE2 ...]
+	#+end_src
 
 ** Options
 - -u, --update-voices :: Update installed Piper voices
 - -r, --random-voice :: Use a random voice for each file
 
 ** Example
-#+BEGIN_SRC bash
-./make-audiobook -r mybook-chapter1.txt mybook-chapter2.txt
-# or
-./make-audiobook mybook-chapter*.txt
-# or
-./make-audiobook --random-voice mybook.epub
-# or use a docx, odt, markdown, any format supported by pandoc can be used
-#+END_SRC
+	#+begin_src bash
+	./make-audiobook -r mybook-chapter1.txt mybook-chapter2.txt
+	# or
+	./make-audiobook mybook-chapter*.txt
+	# or
+	./make-audiobook --random-voice mybook.epub
+	# or it can be a docx, html, odt, markdown, orgmode, or any other format supported by pandoc
+	#+end_src
 
 ** Voice Setup
-On first run, if no Piper voices are found, the script will prompt you to run `piper-voices-setup` to download voices.
+On first run, if no Piper voices are found, the script will prompt you to run =piper-voices-setup= to download voices.
 
 ** Metadata
 You will be prompted for author and book title. These will be added as ID3 tags to the output MP3 files.
 
 ** Compatibility Notes
-- Uses `find` instead of `fd` for voice discovery
+- Uses =find= instead of =fd= for voice discovery
+- Avoids Bash 4+ features for macOS compatibility
+** Compatibility Notes
+- Uses =find= instead of =fd= for voice discovery
+- Avoids Bash 4+ features for macOS compatibility
+- Uses ~find~ instead of ~fd~ for voice discovery
 - Avoids Bash 4+ features for macOS compatibility
 
 ** License

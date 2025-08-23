@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-#shellcheck source=../.qfuncs.sh
-source ~/.qfuncs.sh
+#shellcheck source=shell-and-scripting-helpers/.qfuncs.sh
+source shell-and-scripting-helpers/.qfuncs.sh
 
 set -e -o pipefail
 shopt -s dotglob lastpipe
@@ -120,7 +120,7 @@ convert_file() {
 
    hline "$(basename "$structured_text") -> $target_mp3"
 
-   mv_bak_if "$target_mp3"
+   mv_bak "$target_mp3"
 
    local tmpdir txt wav temp_tagged
 

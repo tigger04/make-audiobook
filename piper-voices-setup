@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# . ./include.sh
+# shellcheck source=shell-and-scripting-helpers/.qfuncs.sh
+source shell-and-scripting-helpers/.qfuncs.sh
 
 set -e
 
@@ -9,10 +10,10 @@ set -e
 
 set -euo pipefail
 
-DEST="${HOME}/.local/share/piper/voices"
-REPO="https://huggingface.co/rhasspy/piper-voices"
+dest=~/.local/share/piper/voices
+repo="https://huggingface.co/rhasspy/piper-voices"
 
-VOICES=(
+voices=(
   "en/en_GB/cori/high"                       # UK female (high)
   "en/en_GB/alan/medium"                     # UK male (medium)
   "en/en_GB/northern_english_male/medium"    # UK male regional (medium)
@@ -23,18 +24,18 @@ VOICES=(
   # "nl/nl_BE/nathalie/medium"                 # BE Dutch female (medium, English-capable)
 )
 
-mkdir -p "$DEST"
+mkdir -p "$dest"
 
-if [ ! -d "${DEST}/.git" ]; then
-  echo "Cloning Piper voices repo into $DEST ..."
-  git clone --depth=1 --filter=blob:none --sparse "$REPO" "$DEST"
-  cd "$DEST"
-  git sparse-checkout set --no-cone "${VOICES[@]}"
+if [ ! -d "$dest/.git" ]; then
+  info "Cloning Piper voices repo into $dest ..."
+  git clone --depth=1 --filter=blob:none --sparse "$repo" "$dest"
+  cd "$dest"
+  git sparse-checkout set --no-cone "${voices[@]}"
 else
-  echo "Updating existing voices repo in $DEST ..."
-  cd "$DEST"
+  info "Updating existing voices repo in $dest ..."
+  cd "$dest"
   git pull --depth=1
-  git sparse-checkout set --no-cone "${VOICES[@]}"
+  git sparse-checkout set --no-cone "${voices[@]}"
 fi
 
-echo "Voices installed under: $DEST"
+echo "Voices installed under: $dest"
