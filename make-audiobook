@@ -164,6 +164,10 @@ convert_file() {
       info "Using random voice: $(basename "$voice_model")"
    fi
 
+   if [ -z "$voice_model" ]; then
+      die "No voice model could be determined"
+   fi
+
    # Generate output filename based on input
    local target_mp3="${input_text_file}.mp3"
 
@@ -206,7 +210,7 @@ convert_file() {
       -e 's/\[============\]/\n\n/g' \
       "$txt"
 
-declare -l txt_lines txt_bytes
+   declare -l txt_lines txt_bytes
    read -r txt_lines < <(wc -l "$txt")
    read -r txt_bytes < <(wc -c <"$txt")
    format_commas "$txt_bytes" txt_bytes_formatted
@@ -261,18 +265,22 @@ declare -l txt_lines txt_bytes
 declare -a successes
 declare -a fails
 
-for formatted_text_file in "$@"; do
-   if [ ! -f "$formatted_text_file" ]; then
-      warn "File not found: $formatted_text_file - skipping"
-      fails+=("$formatted_text_file")
+if ! $random; then
+   voice_model=$(find ~/.local/share/piper/voices -name "*.onnx" | fzf --height 40% --reverse --prompt="Select voice model: ")
+fi
+
+for source_file in "${source_files[@]}"; do
+   if [ ! -f "$source_file" ]; then
+      warn "File not found: $source_file - skipping"
+      fails+=("$source_file")
       continue
    fi
 
-   info "Processing file: $formatted_text_file"
-   if convert_file "$formatted_text_file"; then
-      successes+=("$formatted_text_file")
+   info "Processing file: $source_file"
+   if convert_file "$source_file"; then
+      successes+=("$source_file")
    else
-      fails+=("$formatted_text_file")
+      fails+=("$source_file")
    fi
 done
 
