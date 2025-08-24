@@ -1,0 +1,206 @@
+#!/usr/bin/env bash
+# Have to assume bash v3.2 as lowest common denominator to cater for macOS
+
+# Install dependencies for make-audiobook
+
+die() {
+   if [ $# -gt 0 ]; then
+      echo "⛔️ $*" >&2
+   fi
+   echo "Exiting ..." >&2
+   exit 1
+}
+
+checkmark() {
+   echo "✅ $*"
+}
+
+info() {
+   echo "ℹ️ $*"
+}
+
+_os=$(uname -s)
+path_additions=()
+
+# check for:
+# - Piper TTS (https://github.com/rhasspy/piper)
+# - ffmpeg
+# - pandoc
+# - fzf (for interactive voice selection)
+homebrew_packages=(pipx python3 ffmpeg pandoc fzf fd)
+apt_packages=(ffmpeg pandoc fzf python3 python3-pip fd-find)
+pip_packages=(piper-tts)
+
+if [[ "$_os" == "Darwin" ]]; then
+
+   echo "🔷 Installing dependencies for macOS..."
+
+   # First, for macOS, check if Homebrew is installed
+   if ! command -v brew &>/dev/null; then
+      die "Homebrew is not installed. Please install Homebrew first from https://brew.sh."
+   else
+      checkmark "Homebrew already installed."
+   fi
+
+   # For macOS, if bash 5 not installed, offer to install it
+   if [ -z "$BASH_VERSION" ]; then
+      die "This script must be run with Bash. Please run with 'bash install-dependencies'."
+   fi
+   if [ ${BASH_VERSINFO[0]} -ge 5 ]; then
+      checkmark "Bash ${BASH_VERSINFO[0]} found!"
+   else
+      echo "Bash 5.0 or higher is required. Would you like me to install it for you?"
+      echo "Note, this will also add Homebrew's bash v5 to your path, and add it to"
+      echo "the list of valid shells which may require authentication (y/n):"
+      read -r -n1 install_bash
+      if [[ -z "$install_bash" ]]; then
+         info "No input detected, not installing Bash 5."
+         die "Bash 5.0 or higher is required."
+      elif [[ $install_bash == [Yy] ]]; then
+         brew install bash
+         path_additions+=("/usr/local/bin:/opt/homebrew/bin")
+         # depending on Apple Silicon or Intel Mac, bash will be in either
+         # /usr/local/bin/bash or /opt/homebrew/bin/bash
+         if [ -e /opt/homebrew/bin/bash ]; then
+            path_additions+=("/opt/homebrew/bin/bash")
+            bash_executable="/opt/homebrew/bin/bash"
+         elif [ -e /usr/local/bin/bash ]; then
+            path_additions+=("/usr/local/bin/bash")
+            bash_executable="/usr/local/bin/bash"
+         else
+            die "Failed to find Homebrew's bash installation."
+         fi
+
+         # Add bash to valid shells
+         if ! grep -q "$bash_executable" /etc/shells; then
+            echo "$bash_executable" >>/etc/shells
+         fi
+      else
+         die "Bash 5.0 or higher is required."
+      fi
+   fi
+
+   # Install Homebrew packages
+   # First check what packages are already installed
+   brew_installed=$(mktemp)
+   brew list -1 >"$brew_installed"
+
+   # Install any missing Homebrew packages
+   for pkg in "${homebrew_packages[@]}"; do
+      if ! grep -q -E "^$pkg$" "$brew_installed"; then
+         info installing "$pkg"
+         brew install "$pkg" || warn "Failed to install $pkg via Homebrew."
+      else
+         checkmark "$pkg is already installed."
+      fi
+   done
+
+   # Clean up
+   rm -f "$brew_installed"
+
+   # Install pip packages with pipx
+   for pkg in "${pip_packages[@]}"; do
+      if ! pipx list | grep -q "$pkg"; then
+         info installing "$pkg"
+         pipx install "$pkg" || warn "Failed to install $pkg via pipx."
+      else
+         checkmark "$pkg is already installed."
+      fi
+   done
+
+elif [[ "$_os" == "Linux" ]]; then
+
+   # Install APT packages
+   apt_installed=$(mktemp)
+   dpkg -l | awk '/^ii/ { print $2 }' >"$apt_installed"
+
+   for pkg in "${apt_packages[@]}"; do
+      if ! grep -q -E "^$pkg$" "$apt_installed"; then
+         info installing "$pkg"
+         sudo apt-get install -y "$pkg" || warn "Failed to install $pkg via apt-get."
+      else
+         checkmark "$pkg is already installed."
+      fi
+   done
+
+   # Clean up
+   rm -f "$apt_installed"
+
+   # Install pip packages with pip install --user
+   # first check what's installed for system and user
+   pip_installed=$(mktemp)
+   pip list --format=freeze >"$pip_installed"
+   for pkg in "${pip_packages[@]}"; do
+      if ! grep -q -E "^$pkg==" "$pip_installed"; then
+         info installing "$pkg"
+         pip install --user "$pkg" || warn "Failed to install $pkg via pip."
+      else
+         checkmark "$pkg is already installed."
+      fi
+   done
+
+   path_additions+=(~/.local/bin)
+
+else
+   # Clean up any temp files if unsupported OS
+   [ -n "$brew_installed" ] && rm -f "$brew_installed"
+   [ -n "$apt_installed" ] && rm -f "$apt_installed"
+   [ -n "$pip_installed" ] && rm -f "$pip_installed"
+fi
+
+echo "Would you like to add make-audiobook to your path, so that it"
+echo "can be run from anywhere in your terminal? (y/n)"
+read -r -n1 yes_pls_add_make_audiobook
+if [[ -z "$yes_pls_add_make_audiobook" ]]; then
+   info "No input detected, not adding make-audiobook to your path."
+elif [[ $yes_pls_add_make_audiobook == [Yy] ]]; then
+   path_additions+=("$(dirname "$0")")
+else
+   info "OK, I won't do that then."
+fi
+
+echo "Now checking your path for dependencies"
+
+# Clarify location of piper executable
+if command -v piper &>/dev/null; then
+   checkmark "piper executable found at $(command -v piper)"
+else
+   info "piper executable not found in your PATH. If you installed with pip --user, it may be in ~/.local/bin."
+fi
+
+whats_missing_from_path() {
+   current_path=$(mktemp)
+   echo "$PATH" | tr ':' '\n' | sed -E 's|/$||g' | sort -u >"$current_path"
+
+   while [ $# -gt 0 ]; do
+      if grep -q -E "^${1}$" "$current_path"; then
+         checkmark "Already in PATH: $1" >/dev/stderr
+      else
+         echo -n "$1:"
+      fi
+      shift
+   done
+   rm -f "$current_path"
+}
+
+read -r missing_from_path < <(whats_missing_from_path "${path_additions[@]}")
+
+echo "The following directories need to be added to your PATH:"
+echo "$missing_from_path" | sed -E 's/:/; /g'
+
+read -r -n1 -p "OK to go ahead and do that? (it will add a suffix to your .zshrc or .bashrc) [y/n] " ok_to_add
+
+if [[ $ok_to_add == [Yy] ]]; then
+   if [ $_os == Darwin ]; then
+      # add to both .zshrc and .bash_profile
+      echo "export PATH=$missing_from_path:$PATH" >>~/.zshrc
+      echo "export PATH=$missing_from_path:$PATH" >>~/.bash_profile
+   elif [ $_os == Linux ]; then
+      # add to .bashrc
+      echo "export PATH=$missing_from_path:$PATH" >>~/.bashrc
+   else
+      die "Unsupported operating system: $_os"
+   fi
+else
+   info "OK, I won't do that then."
+fi

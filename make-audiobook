@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #shellcheck source=shell-and-scripting-helpers/.qfuncs.sh
-source ~/.qfuncs.sh
+source "$(dirname "$0")"/shell-and-scripting-helpers/.qfuncs.sh
 
 set -e -o pipefail
 shopt -s dotglob lastpipe
@@ -11,21 +11,21 @@ cleanup_targets=()
 
 # Cleanup function that will run on exit/error
 cleanup() {
-    local exit_code=$?
-    
-    # Clean up all tracked temporary files and directories
-    for target in "${cleanup_targets[@]}"; do
-        if [[ -n "$target" && -e "$target" ]]; then
-            if [[ -d "$target" ]]; then
-                rm -rf "$target"
-            else
-                rm -f "$target"
-            fi
-        fi
-    done
-    
-    # Exit with the original exit code
-    exit $exit_code
+   local exit_code=$?
+
+   # Clean up all tracked temporary files and directories
+   for target in "${cleanup_targets[@]}"; do
+      if [[ -n "$target" && -e "$target" ]]; then
+         if [[ -d "$target" ]]; then
+            rm -rf "$target"
+         else
+            rm -f "$target"
+         fi
+      fi
+   done
+
+   # Exit with the original exit code
+   exit $exit_code
 }
 
 # Set trap to run cleanup on EXIT, ERR, INT, and TERM signals
@@ -33,7 +33,7 @@ trap cleanup EXIT ERR INT TERM
 
 # Function to register files/directories for cleanup
 register_for_cleanup() {
-    cleanup_targets+=("$@")
+   cleanup_targets+=("$@")
 }
 
 if [ $# -eq 0 ] || [[ $1 =~ ^--?h(elp)?$ ]]; then
@@ -50,11 +50,10 @@ WTF:
 OPTIONS:
    -u / --update-voices (update installed Piper voices)
    -r / --random-voice (use a random voice for each file)
+   -l / --list-voices (list voices installed)
 EOM
    exit 1
 fi
-
-
 
 mapfile -t voices_installed < <(fd . -e onnx ~/.local/share/piper/voices)
 if [ ${#voices_installed[@]} -eq 0 ]; then
@@ -62,28 +61,78 @@ if [ ${#voices_installed[@]} -eq 0 ]; then
    show_cmd_execute ~/bin/piper-voices-setup
 fi
 
-if [[ $1 =~ ^--?u(pdate-voices)?$ ]]; then
-   show_cmd_execute ~/bin/piper-voices-setup
-   hline
-   shift
-elif [[ $1 =~ ^--?r(andom)-?(voice|high|medium|low)?$ ]]; then
-   random=true
-   if [ -n "${BASH_REMATCH[2]}" ]; then
-      filter="${BASH_REMATCH[2]}"
+list_installed_voices() {
+   if [ ${#voices_installed[@]} -eq 0 ]; then
+      errortext "No voices installed."
    else
-      filter=.
+      echo "INSTALLED VOICES:"
+      for voice in "${voices_installed[@]}"; do
+         display_voice="$(basename "$voice" .onnx)"
+         case "$display_voice" in
+         en_GB-*)
+            echo -n "🇬🇧"
+            ;;
+         en_US-*)
+            echo -n "🇺🇸"
+            ;;
+         *)
+            echo -n "🌍"
+            ;;
+         esac
+         echo -n "$display_voice "
+         case "$display_voice" in
+         *-high)
+            echo "⭐️⭐️⭐️"
+            ;;
+         *-medium)
+            echo "⭐️⭐️"
+            ;;
+         *-low)
+            echo "⭐️"
+            ;;
+         esac
+      done
+      cat <<EOM
+For Piper voices, medium is usually good enough, best trade-off between 
+speed and quality. High quality voices may produce better results, but
+require significantly more processing time.
+EOM
    fi
-   warn "Using random voices with filter $filter"
+}
+
+# defaults
+random=false
+random_filter=.
+source_files=()
+
+while [ $# -gt 0 ]; do
+   case "$1" in
+   -r* | --random*)
+      random=true
+      # get random_filter from `--random=<filter>`
+      random_filter="${1#*=}"
+      if [[ "$1" != *"="* ]] || [ -z "$random_filter" ]; then
+         random_filter=.
+      fi
+      ;;
+   -u | --update-voices)
+      cd "$cmd_base"
+      show_cmd_execute ./piper-voices-setup
+      exit $?
+      ;;
+   -l | --list-voices)
+      list_installed_voices
+      exit $?
+      ;;
+   *)
+      source_files+=("$1")
+      ;;
+   esac
    shift
-else
-   random=false
-   # select voice from ~/.local/share/piper/voices using fzf
-   voice_model=$(find ~/.local/share/piper/voices -name "*.onnx" | fzf --height 40% --reverse)
+done
 
-   # voice_model=~/.local/share/piper/voices/en_US-ryan-high.onnx
-   # voice_model=~/.local/share/piper/voices/en_US-libritts_r-medium.onnx
-
-fi
+# declare -p random random_filter source_files voices_installed cleanup_targets
+# exit
 
 info "The following metadata will be applied to all $# files specified, if entered."
 # Prompt for author and book (optional)
@@ -108,19 +157,19 @@ extract_track_number() {
 
 # Function to convert a single file
 convert_file() {
-   local structured_text="$1"
+   local input_text_file="$1"
 
    if $random; then
-      read -r voice_model < <(fd "$filter" -e onnx ~/.local/share/piper/voices | shuf | head -n 1)
-      warn "Using random voice: $(basename "$voice_model")"
+      read -r voice_model < <(fd "$random_filter" -e onnx ~/.local/share/piper/voices | shuf | head -n 1)
+      info "Using random voice: $(basename "$voice_model")"
    fi
 
    # Generate output filename based on input
-   local target_mp3="${structured_text%.txt}.mp3"
+   local target_mp3="${input_text_file}.mp3"
 
-   hline "$(basename "$structured_text") -> $target_mp3"
+   hline "$(basename "$input_text_file") -> $target_mp3"
 
-   mv_bak "$target_mp3"
+   mv_bak_if "$target_mp3"
 
    local tmpdir txt wav temp_tagged
 
@@ -130,8 +179,8 @@ convert_file() {
 
    register_for_cleanup "$tmpdir" "$txt" "$wav"
 
-   info "Converting $structured_text to plain text"
-   pandoc "$structured_text" --to plain --wrap=none -o "$txt"
+   info "Converting $input_text_file to plain text"
+   pandoc "$input_text_file" --to plain --wrap=none -o "$txt"
 
    #  clean up text, from experience we need to
    #  - remove all html/xml artefacts
@@ -157,16 +206,23 @@ convert_file() {
       -e 's/\[============\]/\n\n/g' \
       "$txt"
 
-   read -r lines < <(wc -l "$txt")
-   info "Converted $structured_text to plain text with $lines lines"
+declare -l txt_lines txt_bytes
+   read -r txt_lines < <(wc -l "$txt")
+   read -r txt_bytes < <(wc -c <"$txt")
+   format_commas "$txt_bytes" txt_bytes_formatted
 
-   info "Converting $lines of plain text to raw audio ... stand by"
+   info "Converted $input_text_file to plain text with $txt_lines lines\n($txt_bytes_formatted bytes)"
+
+   info "Converting $txt_lines of plain text to raw audio ... stand by"
    pv <"$txt" | piper --model "$voice_model" \
       --output-file "$wav"
 
-   info "Converting raw audio to MP3"
-   #  redirect STDERR to function 'oneline'
+   info "Now converting raw WAV audio to MP3"
    ffmpeg -i "$wav" "$target_mp3"
+
+   info "Tidying up ..."
+   rm -f "$txt" "$wav"
+   rm -rf "$tmpdir"
 
    # Set ID3 tags if author or book title provided
    if [ -n "$author" ] || [ -n "$book_title" ]; then
@@ -185,7 +241,7 @@ convert_file() {
 
       # Try to extract track number from filename
       local track_num
-      track_num=$(extract_track_number "$structured_text")
+      track_num=$(extract_track_number "$input_text_file")
       if [ -n "$track_num" ]; then
          tag_args+=(-metadata "track=$track_num")
          info "Detected track number: $track_num"
@@ -198,25 +254,25 @@ convert_file() {
       mv "$temp_tagged" "$target_mp3"
    fi
 
-   info "Completed: $target_mp3"
+   checktext "$target_mp3"
 }
 
 # Process all input files
 declare -a successes
 declare -a fails
 
-for structured_text in "$@"; do
-   if [ ! -f "$structured_text" ]; then
-      warn "File not found: $structured_text - skipping"
-      fails+=("$structured_text")
+for formatted_text_file in "$@"; do
+   if [ ! -f "$formatted_text_file" ]; then
+      warn "File not found: $formatted_text_file - skipping"
+      fails+=("$formatted_text_file")
       continue
    fi
 
-   info "Processing file: $structured_text"
-   if convert_file "$structured_text"; then
-      successes+=("$structured_text")
+   info "Processing file: $formatted_text_file"
+   if convert_file "$formatted_text_file"; then
+      successes+=("$formatted_text_file")
    else
-      fails+=("$structured_text")
+      fails+=("$formatted_text_file")
    fi
 done
 

@@ -8,31 +8,49 @@ A script to convert ebooks or any other long documents into audiobooks using Pip
 - Optionally add ID3 metadata (author, book title, track number can be calculated from file name)
 - Select voices interactively or randomly
 
+** Quickstart
+*** Install
+#+begin_src bash
+git clone --recursive https://github.com/tigger04/make-audiobook
+cd make-audiobook
+./install-dependencies
+#+end_src
+
+*** Usage
+On first run, it will download voices. Note: English (GB and US) voices are configured,
+but adjust the =piper-voices-setup= script to download voices in other languages.
+#+begin_src bash
+# interactively choose voice to use
+make-audiobook mybook.txt
+# using a random voice
+make-audiobook mybook.epub --random-voice
+
+# using a random voice, but only use medium quality voices
+make-audiobook chapter1.docx chapter2.docx --random=medium
+
+# use wildcards so that chapter01, chapter02, ... etc all get processed
+make-audiobook chapter*.md 
+#+end_src
+
 ** Requirements
-- Piper TTS (https://github.com/rhasspy/piper)
+- Piper TTS (https://github.com/rhasspy/piper) (via pip or pipx)
+- Python 3.8 or higher
 - ffmpeg
 - pandoc
 - fzf (for interactive voice selection)
+- fd (fast alternative to the =find= command)
 - bash v5.0 or higher
 
-** Usage
-	#+begin_src bash
-	./make-audiobook [OPTIONS] TEXT_FILE [TEXT_FILE2 ...]
-	#+end_src
+The install-dependencies script will offer to install these for you, for macOS
+or Linux (assuming Debian/Ubuntu family with APT package manager). For other
+Linux distributions, you may need to install the dependencies manually.
 
 ** Options
 - -u, --update-voices :: Update installed Piper voices
 - -r, --random-voice :: Use a random voice for each file
-
-** Example
-	#+begin_src bash
-	./make-audiobook -r mybook-chapter1.txt mybook-chapter2.txt
-	# or
-	./make-audiobook mybook-chapter*.txt
-	# or
-	./make-audiobook --random-voice mybook.epub
-	# or it can be a docx, html, odt, markdown, orgmode, or any other format supported by pandoc
-	#+end_src
+- -r=medium, --random=medium :: Use a random voice for each file, but only use medium quality voices
+- -l, --list-voices :: List available Piper voices
+- -h, --help :: Show the help message
 
 ** Voice Setup
 On first run, if no Piper voices are found, the script will prompt you to run =piper-voices-setup= to download voices.
@@ -40,17 +58,5 @@ On first run, if no Piper voices are found, the script will prompt you to run =p
 ** Metadata
 You will be prompted for author and book title. These will be added as ID3 tags to the output MP3 files.
 
-** Compatibility Notes
-- Uses =find= instead of =fd= for voice discovery
-- Avoids Bash 4+ features for macOS compatibility
-** Compatibility Notes
-- Uses =find= instead of =fd= for voice discovery
-- Avoids Bash 4+ features for macOS compatibility
-- Uses ~find~ instead of ~fd~ for voice discovery
-- Avoids Bash 4+ features for macOS compatibility
-
 ** License
 MIT
-
-** Author
-tigger04
