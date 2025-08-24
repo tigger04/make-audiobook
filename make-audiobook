@@ -113,6 +113,8 @@ while [ $# -gt 0 ]; do
       random_filter="${1#*=}"
       if [[ "$1" != *"="* ]] || [ -z "$random_filter" ]; then
          random_filter=.
+      else
+         info "Using random filter: $random_filter"
       fi
       ;;
    -u | --update-voices)
