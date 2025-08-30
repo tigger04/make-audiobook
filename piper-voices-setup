@@ -17,24 +17,24 @@ voices=(
   "en/en_GB/cori/high"                       # UK female (high)
   "en/en_GB/alan/medium"                     # UK male (medium)
   "en/en_GB/northern_english_male/medium"    # UK male regional (medium)
-  "en/en_GB/southern_english_female/low"
-  "en/en_GB/alba/medium"
-  "en/en_GB/aru/medium"
-  "en/en_GB/jenny_dioco/medium"
-  "en/en_GB/semaine/medium"
-  "en/en_GB/vctk/medium"
+#   "en/en_GB/southern_english_female/low"
+#   "en/en_GB/alba/medium"
+#   "en/en_GB/aru/medium"
+#   "en/en_GB/jenny_dioco/medium"
+#   "en/en_GB/semaine/medium"
+#   "en/en_GB/vctk/medium"
   "en/en_US/ryan/high"                       # US male (high)
   "en/en_US/amy/medium"                      # US female (medium)
   "en/en_US/lessac/high"                     # US female (high)
-  "en/en_US/lessac/medium"
-  "en/en_US/joe/medium"
-  "en/en_US/john/medium"
-  "en/en_US/hfc_male/medium"
-  "en/en_US/hfc_female/medium"
-  "en/en_US/l2arctic/medium"
-  "en/en_US/arctic/medium"
-  "en/en_US/bryce/medium"
-  "en/en_US/sam/medium"
+#   "en/en_US/lessac/medium"
+#   "en/en_US/joe/medium"
+#   "en/en_US/john/medium"
+#   "en/en_US/hfc_male/medium"
+#   "en/en_US/hfc_female/medium"
+#   "en/en_US/l2arctic/medium"
+#   "en/en_US/arctic/medium"
+#   "en/en_US/bryce/medium"
+#   "en/en_US/sam/medium"
   # "nl/nl_BE/nathalie/medium"                 # BE Dutch female (medium)
   # "nl/nl_BE/nathalie/medium"                 # BE Dutch female (medium, English-capable)
 )

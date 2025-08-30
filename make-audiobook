@@ -49,7 +49,7 @@ WTF:
 
 OPTIONS:
    -u / --update-voices (update installed Piper voices)
-   -r / --random-voice (use a random voice for each file)
+   -r / --random-voice[=FILTER] (use a random voice for each file)
    -l / --list-voices (list voices installed)
 EOM
    exit 1
