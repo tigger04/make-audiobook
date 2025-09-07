@@ -173,7 +173,8 @@ convert_file() {
    fi
 
    # Generate output filename based on input
-   local target_mp3="${input_text_file}.mp3"
+   local target_mp3
+   target_mp3="$(dirname "${input_text_file}")/$(basename "${input_text_file}" .txt).mp3"
 
    hline "$(basename "$input_text_file") -> $target_mp3"
 
@@ -226,7 +227,7 @@ convert_file() {
       --output-file "$wav"
 
    info "Now converting raw WAV audio to MP3"
-   show_cmd_execute_oneline ffmpeg -i "$wav" "$target_mp3"
+   show_cmd_execute ffmpeg -i "$wav" "$target_mp3" | oneline 2>&1
 
    info "Tidying up ..."
    rm -f "$txt" "$wav"
@@ -258,7 +259,7 @@ convert_file() {
       # Create a temporary file for retagging
       temp_tagged="$(mktemp).mp3"
       register_for_cleanup "$temp_tagged"
-      show_cmd_execute_oneline ffmpeg -i "$target_mp3" "${tag_args[@]}" -c copy "$temp_tagged"
+      show_cmd_execute ffmpeg -i "$target_mp3" "${tag_args[@]}" -c copy "$temp_tagged" | oneline 2>&1
       mv "$temp_tagged" "$target_mp3"
    fi
 
