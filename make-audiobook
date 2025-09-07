@@ -2,6 +2,8 @@
 
 #shellcheck source=shell-and-scripting-helpers/.qfuncs.sh
 source "$(dirname "$0")"/shell-and-scripting-helpers/.qfuncs.sh
+#shellcheck source=shell-and-scripting-helpers/.colours.sh
+source "$(dirname "$0")"/shell-and-scripting-helpers/.colours.sh
 
 set -e -o pipefail
 shopt -s dotglob lastpipe
@@ -224,7 +226,7 @@ convert_file() {
       --output-file "$wav"
 
    info "Now converting raw WAV audio to MP3"
-   ffmpeg -i "$wav" "$target_mp3"
+   show_cmd_execute_oneline ffmpeg -i "$wav" "$target_mp3"
 
    info "Tidying up ..."
    rm -f "$txt" "$wav"
@@ -256,7 +258,7 @@ convert_file() {
       # Create a temporary file for retagging
       temp_tagged="$(mktemp).mp3"
       register_for_cleanup "$temp_tagged"
-      ffmpeg -i "$target_mp3" "${tag_args[@]}" -c copy "$temp_tagged"
+      show_cmd_execute_oneline ffmpeg -i "$target_mp3" "${tag_args[@]}" -c copy "$temp_tagged"
       mv "$temp_tagged" "$target_mp3"
    fi
 
