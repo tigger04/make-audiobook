@@ -53,6 +53,9 @@ OPTIONS:
    -u / --update-voices (update installed Piper voices)
    -r / --random-voice[=FILTER] (use a random voice for each file)
    -l / --list-voices (list voices installed)
+   -s / --length_scale=<SCALE> (set length scale or speed of TTS.
+                               - higher values = slower speech. Defaults to 1.5
+                                 as I find 1.0 a bit fast for audiobooks.)
 EOM
    exit 1
 fi
@@ -106,6 +109,7 @@ EOM
 random=false
 random_filter=.
 source_files=()
+length_scale=1.5
 
 while [ $# -gt 0 ]; do
    case "$1" in
@@ -127,6 +131,20 @@ while [ $# -gt 0 ]; do
    -l | --list-voices)
       list_installed_voices
       exit $?
+      ;;
+      s)
+      if [[ "$1" == *=* ]]; then
+         length_scale="${1#*=}"
+         if ! [[ $length_scale =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+            die "Length scale must be a positive number (integer or decimal)"
+         fi
+         if (( $(echo "$length_scale <= 0" | bc -l) )); then
+            die "Length scale must be greater than 0"
+         fi
+         info "Using length scale: $length_scale"
+      else
+         die "Length scale option requires a value, e.g. --length_scale=1.5"
+      fi
       ;;
    *)
       source_files+=("$1")
@@ -223,7 +241,7 @@ convert_file() {
    info "Converted $input_text_file to plain text with $txt_lines lines\n($txt_bytes_formatted bytes)"
 
    info "Converting $txt_lines of plain text to raw audio ... stand by"
-   pv <"$txt" | piper --model "$voice_model" \
+   pv <"$txt" | piper --model "$voice_model" --length_scale "$length_scale" \
       --output-file "$wav"
 
    info "Now converting raw WAV audio to MP3"
