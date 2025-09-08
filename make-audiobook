@@ -132,13 +132,13 @@ while [ $# -gt 0 ]; do
       list_installed_voices
       exit $?
       ;;
-      s)
+   s)
       if [[ "$1" == *=* ]]; then
          length_scale="${1#*=}"
          if ! [[ $length_scale =~ ^[0-9]+([.][0-9]+)?$ ]]; then
             die "Length scale must be a positive number (integer or decimal)"
          fi
-         if (( $(echo "$length_scale <= 0" | bc -l) )); then
+         if (($(echo "$length_scale <= 0" | bc -l))); then
             die "Length scale must be greater than 0"
          fi
          info "Using length scale: $length_scale"
@@ -292,14 +292,16 @@ if ! $random; then
    voice_model=$(find ~/.local/share/piper/voices -name "*.onnx" | fzf --height 40% --reverse --prompt="Select voice model: ")
 fi
 
+n=0
 for source_file in "${source_files[@]}"; do
+   n=$((n + 1))
    if [ ! -f "$source_file" ]; then
       warn "File not found: $source_file - skipping"
       fails+=("$source_file")
       continue
    fi
 
-   info "Processing file: $source_file"
+   info "Processing file $n of ${#source_files[@]}: $source_file"
    if convert_file "$source_file"; then
       successes+=("$source_file")
    else
