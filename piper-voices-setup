@@ -5,52 +5,97 @@ source "$(dirname "$0")"/shell-and-scripting-helpers/.qfuncs.sh
 set -e
 
 #!/usr/bin/env bash
-# Install/update selected Piper voices with git sparse checkout.
+# Install/update selected Piper voices by downloading individual files.
 # Destination: ~/.local/share/piper/voices
 
 set -euo pipefail
 
 dest=~/.local/share/piper/voices
-repo="https://huggingface.co/rhasspy/piper-voices"
+base_url="https://huggingface.co/rhasspy/piper-voices/resolve/main"
 
 voices=(
-  "en/en_GB/cori/high"                       # UK female (high)
-  "en/en_GB/alan/medium"                     # UK male (medium)
-  "en/en_GB/northern_english_male/medium"    # UK male regional (medium)
-#   "en/en_GB/southern_english_female/low"
-#   "en/en_GB/alba/medium"
-#   "en/en_GB/aru/medium"
-#   "en/en_GB/jenny_dioco/medium"
-#   "en/en_GB/semaine/medium"
-#   "en/en_GB/vctk/medium"
-  "en/en_US/ryan/high"                       # US male (high)
-  "en/en_US/amy/medium"                      # US female (medium)
-  "en/en_US/lessac/high"                     # US female (high)
-#   "en/en_US/lessac/medium"
-#   "en/en_US/joe/medium"
-#   "en/en_US/john/medium"
-#   "en/en_US/hfc_male/medium"
-#   "en/en_US/hfc_female/medium"
-#   "en/en_US/l2arctic/medium"
-#   "en/en_US/arctic/medium"
-#   "en/en_US/bryce/medium"
-#   "en/en_US/sam/medium"
-  # "nl/nl_BE/nathalie/medium"                 # BE Dutch female (medium)
-  # "nl/nl_BE/nathalie/medium"                 # BE Dutch female (medium, English-capable)
+   "en/en_GB/cori/high/en_GB-cori-high"                                       # UK female (high)
+   "en/en_GB/alan/medium/en_GB-alan-medium"                                   # UK male (medium)
+   "en/en_GB/northern_english_male/medium/en_GB-northern_english_male-medium" # UK male regional (medium)
+   #   "en/en_GB/southern_english_female/low/en_GB-southern_english_female-low"
+   "en/en_GB/alba/medium/en_GB-alba-medium"
+   #   "en/en_GB/aru/medium/en_GB-aru-medium"
+   "en/en_GB/jenny_dioco/medium/en_GB-jenny_dioco-medium"
+   #   "en/en_GB/semaine/medium/en_GB-semaine-medium"
+   "en/en_GB/vctk/medium/en_GB-vctk-medium"
+   "en/en_US/ryan/high/en_US-ryan-high"   # US male (high)
+   "en/en_US/amy/medium/en_US-amy-medium" # US female (medium)
+   #   "en/en_US/lessac/high/en_US-lessac-high"                   # US female (high)
+   "en/en_US/lessac/medium/en_US-lessac-medium"
+   #   "en/en_US/joe/medium/en_US-joe-medium"
+   #   "en/en_US/john/medium/en_US-john-medium"
+   "en/en_US/hfc_male/medium/en_US-hfc_male-medium"
+   "en/en_US/hfc_female/medium/en_US-hfc_female-medium"
+   #   "en/en_US/l2arctic/medium/en_US-l2arctic-medium"
+   #   "en/en_US/arctic/medium/en_US-arctic-medium"
+   #   "en/en_US/bryce/medium/en_US-bryce-medium"
+   #   "en/en_US/sam/medium/en_US-sam-medium"
+   # "nl/nl_BE/nathalie/medium/nl_BE-nathalie-medium"                 # BE Dutch female (medium)
 )
 
 mkdir -p "$dest"
 
-if [ ! -d "$dest/.git" ]; then
-  info "Cloning Piper voices repo into $dest ..."
-  git clone --depth=1 --filter=blob:none --sparse "$repo" "$dest"
-  cd "$dest"
-  git sparse-checkout set --no-cone "${voices[@]}"
-else
-  info "Updating existing voices repo in $dest ..."
-  cd "$dest"
-  git pull --depth=1
-  git sparse-checkout set --no-cone "${voices[@]}"
-fi
+success=()
+fails=()
+already=()
+
+for voice in "${voices[@]}"; do
+   # Extract the filename from the voice path (everything after the last /)
+   voice_filename=$(basename "$voice")
+   # Extract the directory path (everything before the filename)
+   voice_path=$(dirname "$voice")
+
+   mkdir -p "$dest"
+
+   for ext in onnx onnx.json; do
+      source_url="$base_url/$voice.$ext"
+      target_path="$dest/$voice_filename.$ext"
+
+      if [ -e "$target_path" ]; then
+         warn "Skipping $(basename "$target_path")"
+         already+=("$voice_filename.$ext")
+      else
+         info "Downloading $voice_filename.$ext ..."
+         if command -v curl >/dev/null 2>&1; then
+            curl -L --fail -o "$target_path" "$source_url" || {
+               errortext "Failed to download $source_url"
+               fails+=("$voice_filename.$ext")
+               continue
+            }
+         elif command -v wget >/dev/null 2>&1; then
+            wget -O "$target_path" "$source_url" || {
+               errortext "Failed to download $source_url"
+               fails+=("$voice_filename.$ext")
+               continue
+            }
+         else
+            die "curl or wget required to download voices."
+         fi
+         if [ -e "$target_path" ]; then
+            success+=("$voice_filename.$ext")
+         fi
+      fi
+   done
+done
+
+[ ${#success[@]} -eq 0 ] || {
+   checktext Successfully downloaded:
+   printf "• %s\n" "${success[@]}" >&2
+}
+
+[ ${#fails[@]} -eq 0 ] || {
+   errortext Failed to download:
+   printf "• %s\n" "${fails[@]}" >&2
+}
+
+[ ${#already[@]} -eq 0 ] || {
+   warn The following were already installed:
+   printf "• %s\n" "${already[@]}" >&2
+}
 
 echo "Voices installed under: $dest"
