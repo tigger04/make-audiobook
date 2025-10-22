@@ -14,28 +14,45 @@ dest=~/.local/share/piper/voices
 base_url="https://huggingface.co/rhasspy/piper-voices/resolve/main"
 
 voices=(
+   # === HIGH QUALITY VOICES - Well regarded for naturalness ===
+   "en/en_US/lessac/high/en_US-lessac-high"                                   # US female (high) - Excellent quality, very natural
+   "en/en_US/ryan/high/en_US-ryan-high"                                       # US male (high) - Clear, professional
+   "en/en_US/ljspeech/high/en_US-ljspeech-high"                              # US female (high) - LJ Speech dataset, very clear
+   "en/en_US/libritts_r/medium/en_US-libritts_r-medium"                      # LibriTTS-R, high quality multi-speaker
+   "en/en_US/kristin/medium/en_US-kristin-medium"                            # US female (medium) - Warm, natural tone
+   "en/en_US/kathleen/low/en_US-kathleen-low"                                # US female (low) - Deep, rich voice
+   "en/en_US/danny/low/en_US-danny-low"                                      # US male (low) - Deep, authoritative
+   "en/en_US/norman/medium/en_US-norman-medium"                              # US male (medium) - Professional narrator style
+   
+   # === EXISTING QUALITY VOICES ===
    "en/en_GB/cori/high/en_GB-cori-high"                                       # UK female (high)
    "en/en_GB/alan/medium/en_GB-alan-medium"                                   # UK male (medium)
    "en/en_GB/northern_english_male/medium/en_GB-northern_english_male-medium" # UK male regional (medium)
+   "en/en_GB/alba/medium/en_GB-alba-medium"                                   # UK female (medium)
+   "en/en_GB/jenny_dioco/medium/en_GB-jenny_dioco-medium"                     # UK female (medium)
+   "en/en_GB/vctk/medium/en_GB-vctk-medium"                                   # UK multi-speaker VCTK dataset
+   
+   # # === ADDITIONAL US VOICES ===
+   # "en/en_US/amy/medium/en_US-amy-medium"                                     # US female (medium)
+   # "en/en_US/lessac/medium/en_US-lessac-medium"                              # US female (medium)
+   # "en/en_US/hfc_male/medium/en_US-hfc_male-medium"                          # US male (medium)
+   # "en/en_US/hfc_female/medium/en_US-hfc_female-medium"                      # US female (medium)
+   # "en/en_US/joe/medium/en_US-joe-medium"                                     # US male (medium) - Natural conversational
+   # "en/en_US/john/medium/en_US-john-medium"                                   # US male (medium) - Clear articulation
+   # "en/en_US/bryce/medium/en_US-bryce-medium"                                 # US male (medium) - Smooth delivery
+   # "en/en_US/sam/low/en_US-sam-low"                                          # US male (low) - Deep, resonant
+   
+   # === EXPERIMENTAL/SPECIALTY VOICES ===
+   #   "en/en_US/l2arctic/medium/en_US-l2arctic-medium"                      # L2-ARCTIC dataset
+   #   "en/en_US/arctic/medium/en_US-arctic-medium"                          # ARCTIC dataset
+   #   "en/en_US/libritts/medium/en_US-libritts-medium"                      # LibriTTS original
+   #   "en/en_US/kusal/medium/en_US-kusal-medium"                            # Accented English
    #   "en/en_GB/southern_english_female/low/en_GB-southern_english_female-low"
-   "en/en_GB/alba/medium/en_GB-alba-medium"
    #   "en/en_GB/aru/medium/en_GB-aru-medium"
-   "en/en_GB/jenny_dioco/medium/en_GB-jenny_dioco-medium"
    #   "en/en_GB/semaine/medium/en_GB-semaine-medium"
-   "en/en_GB/vctk/medium/en_GB-vctk-medium"
-   "en/en_US/ryan/high/en_US-ryan-high"   # US male (high)
-   "en/en_US/amy/medium/en_US-amy-medium" # US female (medium)
-   #   "en/en_US/lessac/high/en_US-lessac-high"                   # US female (high)
-   "en/en_US/lessac/medium/en_US-lessac-medium"
-   #   "en/en_US/joe/medium/en_US-joe-medium"
-   #   "en/en_US/john/medium/en_US-john-medium"
-   "en/en_US/hfc_male/medium/en_US-hfc_male-medium"
-   "en/en_US/hfc_female/medium/en_US-hfc_female-medium"
-   #   "en/en_US/l2arctic/medium/en_US-l2arctic-medium"
-   #   "en/en_US/arctic/medium/en_US-arctic-medium"
-   #   "en/en_US/bryce/medium/en_US-bryce-medium"
-   #   "en/en_US/sam/medium/en_US-sam-medium"
-   # "nl/nl_BE/nathalie/medium/nl_BE-nathalie-medium"                 # BE Dutch female (medium)
+   
+   # === OTHER LANGUAGES (Uncomment as needed) ===
+   # "nl/nl_BE/nathalie/medium/nl_BE-nathalie-medium"                         # BE Dutch female (medium)
 )
 
 mkdir -p "$dest"
@@ -47,8 +64,6 @@ already=()
 for voice in "${voices[@]}"; do
    # Extract the filename from the voice path (everything after the last /)
    voice_filename=$(basename "$voice")
-   # Extract the directory path (everything before the filename)
-   voice_path=$(dirname "$voice")
 
    mkdir -p "$dest"
 
