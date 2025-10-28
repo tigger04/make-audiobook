@@ -18,7 +18,7 @@ voices=(
    "en/en_US/lessac/high/en_US-lessac-high"                                   # US female (high) - Excellent quality, very natural
    "en/en_US/ryan/high/en_US-ryan-high"                                       # US male (high) - Clear, professional
    "en/en_US/ljspeech/high/en_US-ljspeech-high"                              # US female (high) - LJ Speech dataset, very clear
-   "en/en_US/libritts_r/medium/en_US-libritts_r-medium"                      # LibriTTS-R, high quality multi-speaker
+   "en/en_US/libritts_r/medium/en_US-libritts_r-medium"                      # LibriTTS-R, high quality multi-speaker (only medium available)
    "en/en_US/kristin/medium/en_US-kristin-medium"                            # US female (medium) - Warm, natural tone
    "en/en_US/kathleen/low/en_US-kathleen-low"                                # US female (low) - Deep, rich voice
    "en/en_US/danny/low/en_US-danny-low"                                      # US male (low) - Deep, authoritative
