@@ -233,12 +233,14 @@ convert_file() {
       -e 's/\[============\]/\n\n/g' \
       "$txt"
 
-   declare -l txt_lines txt_bytes
+   declare -l txt_lines txt_bytes txt_words
    read -r txt_lines < <(wc -l "$txt")
    read -r txt_bytes < <(wc -c <"$txt")
+   read -r txt_words < <(wc -w <"$txt")
    format_commas "$txt_bytes" txt_bytes_formatted
+   format_commas "$txt_words" txt_words_formatted
 
-   info "Converted $input_text_file to plain text with $txt_lines lines\n($txt_bytes_formatted bytes)"
+   info "Converted $input_text_file to plain text with $txt_lines lines, $txt_words_formatted words\n($txt_bytes_formatted bytes)"
 
    info "Converting $txt_lines of plain text to raw audio ... stand by"
    pv <"$txt" | piper --model "$voice_model" --length_scale "$length_scale" \
