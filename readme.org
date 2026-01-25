@@ -21,7 +21,7 @@ See [[./docs/installation.md][Installation Guide]] for detailed instructions for
 **** Quick Install (macOS)
 #+begin_src bash
 brew tap tigger04/make-audiobook
-brew install make-audiobook
+brew install --cask make-audiobook
 #+end_src
 
 **** Quick Install (from source)

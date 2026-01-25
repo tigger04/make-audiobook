@@ -14,11 +14,14 @@ Before installing, ensure your input files are **DRM-free**. This tool cannot pr
 # Add the tap
 brew tap tigger04/make-audiobook
 
-# Install the application
+# Install the GUI application (includes CLI)
+brew install --cask make-audiobook
+
+# Or CLI-only (no GUI)
 brew install make-audiobook
 ```
 
-This installs the CLI, GUI, and all dependencies (ffmpeg, pandoc, piper-tts, fzf, fd).
+The cask installs the full GUI application with all dependencies bundled. The formula installs CLI tools only (ffmpeg, pandoc, piper-tts, fzf, fd installed separately).
 
 ### Manual Installation
 
