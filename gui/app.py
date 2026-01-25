@@ -12,6 +12,7 @@ from typing import Optional
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from gui.views.main_window import MainWindow
+from gui.utils.paths import find_executable
 
 logger = logging.getLogger(__name__)
 
@@ -28,16 +29,17 @@ def setup_logging() -> None:
 def check_dependencies() -> list[str]:
     """Check for required system dependencies.
 
+    Uses expanded PATH to find executables in common locations
+    (Homebrew, pipx, etc.) even when launched from .app bundle.
+
     Returns:
         List of missing dependencies
     """
-    import shutil
-
     missing = []
     required = ["piper", "ffmpeg", "pandoc"]
 
     for cmd in required:
-        if shutil.which(cmd) is None:
+        if find_executable(cmd) is None:
             missing.append(cmd)
 
     return missing
