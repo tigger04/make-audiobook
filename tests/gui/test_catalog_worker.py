@@ -9,19 +9,12 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
 
-from PySide6.QtCore import QCoreApplication
 
 from gui.workers.catalog_worker import CatalogWorker
 from gui.models.voice import VoiceCatalog
 
 
-@pytest.fixture(scope="module")
-def qapp():
-    """Provide a QApplication for signal/slot testing."""
-    app = QCoreApplication.instance()
-    if app is None:
-        app = QCoreApplication([])
-    return app
+# qapp fixture is provided by conftest.py
 
 
 @pytest.fixture

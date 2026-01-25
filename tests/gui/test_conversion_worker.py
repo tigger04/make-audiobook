@@ -7,19 +7,12 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from PySide6.QtCore import QCoreApplication
 
 from gui.workers.conversion_worker import ConversionWorker
 from gui.models.conversion_job import ConversionJob, JobStatus
 
 
-@pytest.fixture(scope="module")
-def qapp():
-    """Provide a QApplication for signal/slot testing."""
-    app = QCoreApplication.instance()
-    if app is None:
-        app = QCoreApplication([])
-    return app
+# qapp fixture is provided by conftest.py
 
 
 @pytest.fixture
