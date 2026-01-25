@@ -8,6 +8,7 @@ from gui.views.voice_browser import VoiceBrowserDialog
 from gui.views.voice_manager import VoiceManagerWidget
 from gui.views.settings_panel import SettingsPanel
 from gui.views.progress_panel import ProgressPanel
+from gui.views.main_window import MainWindow
 
 __all__ = [
     "FileListWidget",
@@ -16,4 +17,5 @@ __all__ = [
     "VoiceManagerWidget",
     "SettingsPanel",
     "ProgressPanel",
+    "MainWindow",
 ]
