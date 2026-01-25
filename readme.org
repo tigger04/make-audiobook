@@ -1,76 +1,82 @@
 * make-audiobook
 
-A script to convert ebooks or any other long documents into audiobooks using Piper TTS, with support for batch processing and ID3 tagging.
+Convert ebooks and documents into audiobooks using Piper TTS - locally, privately, and free.
 
-*[[./docs/installation.md][Installation Guide]]* | [[./docs/vision.md][Project Vision]] | [[./docs/implementation_plan.md][Implementation Plan]]
+*[[./docs/installation.md][Installation]]* | *[[./docs/cli-usage.md][CLI Guide]]* | *[[./docs/gui-usage.md][GUI Guide]]* | [[./docs/vision.md][Vision]]
 
 ** Important
+
 Input files must be DRM-free. This tool cannot process DRM-protected ebooks (e.g., Kindle .azw, Adobe DRM .epub). Use DRM-free sources or legally remove DRM from files you own.
 
 ** Features
-- Converts one or more text files to MP3 audiobooks using Piper TTS
-- Supports batch processing
-- Optionally add ID3 metadata (author, book title, track number can be calculated from file name)
-- Select voices interactively or randomly
+
+- Local processing - no cloud services, no data leaves your machine
+- GUI and CLI interfaces
+- Converts epub, docx, txt, md, html, pdf to MP3
+- Batch processing multiple files
+- ID3 metadata tagging (author, title, track numbers)
+- Voice browser to download from 100+ Piper voices
+- Interactive or random voice selection
 
 ** Quickstart
-*** Install
 
-See [[./docs/installation.md][Installation Guide]] for detailed instructions for macOS, Linux, and Windows.
+*** Install (macOS)
 
-**** Quick Install (macOS)
 #+begin_src bash
 brew install --cask tigger04/tap/make-audiobook
 #+end_src
 
-**** Quick Install (from source)
+See [[./docs/installation.md][Installation Guide]] for Linux, Windows, and manual installation.
+
+*** GUI
+
+Launch from Applications, or:
+
 #+begin_src bash
-git clone --recursive https://github.com/tigger04/make-audiobook
-cd make-audiobook
-./install-dependencies
+make gui
 #+end_src
 
-*** Usage
-On first run, it will download voices. Note: English (GB and US) voices are configured,
-but adjust the =piper-voices-setup= script to download voices in other languages.
+1. Drag files onto the window
+2. Select a voice
+3. Click "Convert to Audiobook"
+
+[[./docs/gui-usage.md][Full GUI Guide →]]
+
+*** CLI
+
 #+begin_src bash
-# interactively choose voice to use
-make-audiobook mybook.txt
-# using a random voice
+# Convert with interactive voice selection
+make-audiobook mybook.epub
+
+# Random voice
 make-audiobook mybook.epub --random-voice
 
-# using a random voice, but only use medium quality voices
-make-audiobook chapter1.docx chapter2.docx --random=medium
-
-# use wildcards so that chapter01, chapter02, ... etc all get processed
-make-audiobook chapter*.md 
+# Batch processing
+make-audiobook chapter*.txt --random=high
 #+end_src
 
-** Requirements
-- Piper TTS (https://github.com/rhasspy/piper) (via pip or pipx)
-- Python 3.8 or higher
-- ffmpeg
-- pandoc
-- fzf (for interactive voice selection)
-- fd (fast alternative to the =find= command)
-- bash v5.0 or higher
+[[./docs/cli-usage.md][Full CLI Guide →]]
 
-The install-dependencies script will offer to install these for you, for macOS
-or Linux (assuming Debian/Ubuntu family with APT package manager). For other
-Linux distributions, you may need to install the dependencies manually.
+** Supported Formats
 
-** Options
-- -u, --update-voices :: Update installed Piper voices
-- -r, --random-voice :: Use a random voice for each file
-- -r=medium, --random=medium :: Use a random voice for each file, but only use medium quality voices
-- -l, --list-voices :: List available Piper voices
-- -h, --help :: Show the help message
+| Input | Output |
+|-------+--------|
+| .epub | .mp3   |
+| .docx |        |
+| .txt  |        |
+| .md   |        |
+| .html |        |
+| .pdf  |        |
 
-** Voice Setup
-On first run, if no Piper voices are found, the script will prompt you to run =piper-voices-setup= to download voices.
+** Documentation
 
-** Metadata
-You will be prompted for author and book title. These will be added as ID3 tags to the output MP3 files.
+| Document | Description |
+|----------+-------------|
+| [[./docs/installation.md][Installation Guide]] | Setup for macOS, Linux, Windows |
+| [[./docs/cli-usage.md][CLI Usage]] | Command-line options and examples |
+| [[./docs/gui-usage.md][GUI Usage]] | Visual interface walkthrough |
+| [[./docs/vision.md][Project Vision]] | Goals and design philosophy |
 
 ** License
-MIT
+
+MIT - Copyright Taḋg Paul

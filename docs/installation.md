@@ -20,6 +20,8 @@ brew install tigger04/tap/make-audiobook
 
 The cask installs the full GUI application with all dependencies bundled. The formula installs CLI tools only (requires ffmpeg, pandoc, piper-tts, fzf, fd).
 
+> **Note:** The app is not notarized. If you download the DMG manually (not via Homebrew), macOS Gatekeeper will warn "Apple could not verify...". See [GUI Usage Guide](gui-usage.md#macos-gatekeeper-warning) for workarounds.
+
 ### Manual Installation
 
 1. Install Homebrew from https://brew.sh if not already installed
