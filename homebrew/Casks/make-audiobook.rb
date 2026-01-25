@@ -33,11 +33,8 @@ cask "make-audiobook" do
     ohai "To install default voices, run: piper-voices-setup"
   end
 
-  uninstall_postflight do
-    # Optionally clean up piper-tts
-    ohai "Note: piper-tts and voices remain installed."
-    ohai "To remove: pipx uninstall piper-tts && rm -rf ~/.local/share/piper"
-  end
+  # Note: piper-tts and voices remain after uninstall.
+  # To fully remove: pipx uninstall piper-tts && rm -rf ~/.local/share/piper
 
   zap trash: [
     "~/.local/share/piper",
