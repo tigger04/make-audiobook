@@ -123,6 +123,8 @@ chmod +x make-audiobook.AppImage
 
 ## Windows
 
+> **Note:** Windows support is untested - we don't have Windows hardware. If you try it, please [open an issue](https://github.com/tigger04/make-audiobook/issues) with feedback. Contributions welcome!
+
 ### Installer (Recommended)
 
 Download the installer from the [releases page](https://github.com/tigger04/make-audiobook/releases):
