@@ -3,7 +3,9 @@
 
 """Path constants and utilities for make-audiobook GUI."""
 
+import os
 from pathlib import Path
+from typing import Optional
 
 # Standard directories
 HOME = Path.home()
@@ -17,17 +19,81 @@ CACHE_DIR = HOME / ".cache" / "make-audiobook"
 # Configuration file
 CONFIG_FILE = HOME / ".config" / "make-audiobook" / "settings.json"
 
+# Common binary paths to search when running as macOS app bundle.
+# These paths may not be in PATH when launched from Finder.
+COMMON_BIN_PATHS = [
+    "/opt/homebrew/bin",      # Homebrew on Apple Silicon
+    "/opt/homebrew/sbin",
+    "/usr/local/bin",         # Homebrew on Intel, manual installs
+    "/usr/local/sbin",
+    "~/.local/bin",           # pipx, user installs (piper-tts)
+    "/usr/bin",
+    "/bin",
+    "/usr/sbin",
+    "/sbin",
+]
+
+
+def get_expanded_path() -> str:
+    """Return PATH with common binary locations added.
+
+    When launched as a macOS .app bundle, the process may not have
+    the user's shell PATH. This function expands PATH to include
+    common locations where Homebrew, pipx, and system tools are found.
+
+    Returns:
+        Colon-separated PATH string with common locations included.
+    """
+    current_path = os.environ.get("PATH", "")
+    current_entries = set(current_path.split(os.pathsep)) if current_path else set()
+
+    # Expand ~ in common paths and add to set
+    expanded_entries = list(current_entries)
+    for path in COMMON_BIN_PATHS:
+        expanded = os.path.expanduser(path)
+        if expanded not in current_entries:
+            expanded_entries.append(expanded)
+            current_entries.add(expanded)
+
+    return os.pathsep.join(expanded_entries)
+
+
+def find_executable(name: str) -> Optional[Path]:
+    """Find an executable by name, searching expanded PATH.
+
+    Args:
+        name: The executable name to find (e.g., "ffmpeg", "piper")
+
+    Returns:
+        Path to the executable if found, None otherwise.
+    """
+    expanded_path = get_expanded_path()
+
+    for directory in expanded_path.split(os.pathsep):
+        if not directory:
+            continue
+        candidate = Path(directory) / name
+        if candidate.exists() and os.access(candidate, os.X_OK):
+            return candidate
+
+    return None
+
 
 def get_script_path() -> Path:
     """Return the path to the make-audiobook script.
 
-    Searches in the package directory first, then in PATH.
+    Searches in the package directory first, then in expanded PATH.
     """
     # First, look relative to this module
     module_dir = Path(__file__).parent.parent.parent
     script_path = module_dir / "make-audiobook"
     if script_path.exists():
         return script_path
+
+    # Search in expanded PATH
+    found = find_executable("make-audiobook")
+    if found:
+        return found
 
     # Fallback: assume it's in PATH
     return Path("make-audiobook")

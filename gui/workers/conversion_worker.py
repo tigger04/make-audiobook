@@ -10,10 +10,10 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import QObject, QProcess, Signal
+from PySide6.QtCore import QObject, QProcess, QProcessEnvironment, Signal
 
 from gui.models.conversion_job import ConversionJob, JobStatus
-from gui.utils.paths import get_script_path
+from gui.utils.paths import get_script_path, get_expanded_path
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +55,7 @@ class ConversionWorker(QObject):
         """Start the conversion process.
 
         Creates a QProcess and runs make-audiobook with job parameters.
+        Sets up expanded PATH to find dependencies when running from .app bundle.
         """
         self._process = QProcess(self)
         self._process.readyReadStandardOutput.connect(self._on_stdout_ready)
@@ -62,11 +63,17 @@ class ConversionWorker(QObject):
         self._process.started.connect(self._on_process_started)
         self._process.finished.connect(self._on_process_finished)
 
+        # Set up environment with expanded PATH for macOS app bundle
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("PATH", get_expanded_path())
+        self._process.setProcessEnvironment(env)
+
         cmd = self._build_command()
         program = str(cmd[0])
         args = [str(a) for a in cmd[1:]]
 
         logger.info("Starting conversion: %s %s", program, " ".join(args))
+        logger.debug("PATH: %s", env.value("PATH"))
         self._process.start(program, args)
 
     def run(self) -> None:
