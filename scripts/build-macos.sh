@@ -106,15 +106,23 @@ if command -v create-dmg &>/dev/null; then
     # Remove existing DMG if present
     rm -f "$DIST_DIR/$DMG_NAME"
 
-    create-dmg \
-        --volname "$APP_NAME" \
-        --volicon "resources/icon.icns" 2>/dev/null || true \
-        --window-pos 200 120 \
-        --window-size 600 400 \
-        --icon-size 100 \
-        --icon "$APP_NAME.app" 150 200 \
-        --app-drop-link 450 200 \
-        --hide-extension "$APP_NAME.app" \
+    # Build create-dmg command
+    CREATE_DMG_ARGS=(
+        --volname "$APP_NAME"
+        --window-pos 200 120
+        --window-size 600 400
+        --icon-size 100
+        --icon "$APP_NAME.app" 150 200
+        --app-drop-link 450 200
+        --hide-extension "$APP_NAME.app"
+    )
+
+    # Add volicon if icon exists
+    if [[ -f "$PROJECT_DIR/resources/icon.icns" ]]; then
+        CREATE_DMG_ARGS+=(--volicon "$PROJECT_DIR/resources/icon.icns")
+    fi
+
+    create-dmg "${CREATE_DMG_ARGS[@]}" \
         "$DIST_DIR/$DMG_NAME" \
         "$DIST_DIR/$APP_NAME.app"
 
