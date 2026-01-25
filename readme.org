@@ -13,6 +13,16 @@ Input files must be DRM-free. This tool cannot process DRM-protected ebooks (e.g
 
 ** Quickstart
 *** Install
+
+See [[./docs/installation.md][Installation Guide]] for detailed instructions for macOS, Linux, and Windows.
+
+**** Quick Install (macOS)
+#+begin_src bash
+brew tap tigger04/make-audiobook
+brew install make-audiobook
+#+end_src
+
+**** Quick Install (from source)
 #+begin_src bash
 git clone --recursive https://github.com/tigger04/make-audiobook
 cd make-audiobook
