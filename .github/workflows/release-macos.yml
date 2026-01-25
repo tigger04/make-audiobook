@@ -1,0 +1,152 @@
+# ABOUTME: GitHub Actions workflow for building macOS releases.
+# ABOUTME: Triggers on version tags, builds DMG, uploads to GitHub Releases.
+
+name: Build macOS Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g., 0.1.0)'
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: Build macOS App
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build app and DMG
+        run: ./scripts/build-macos.sh ${{ steps.version.outputs.version }}
+
+      - name: Calculate SHA256
+        id: sha256
+        run: |
+          SHA256=$(shasum -a 256 dist/make-audiobook-${{ steps.version.outputs.version }}.dmg | awk '{print $1}')
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          echo "SHA256: $SHA256"
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: make-audiobook-${{ steps.version.outputs.version }}-macos
+          path: dist/*.dmg
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*.dmg
+          body: |
+            ## make-audiobook ${{ steps.version.outputs.version }}
+
+            ### Installation
+
+            **macOS (Homebrew):**
+            ```bash
+            brew install --cask tigger04/tap/make-audiobook
+            ```
+
+            **Manual:**
+            Download and open the DMG, drag to Applications.
+
+            ### SHA256
+            ```
+            ${{ steps.sha256.outputs.sha256 }}  make-audiobook-${{ steps.version.outputs.version }}.dmg
+            ```
+
+      - name: Output Homebrew update info
+        run: |
+          echo "::notice::Update homebrew-tap with:"
+          echo "::notice::  version \"${{ steps.version.outputs.version }}\""
+          echo "::notice::  sha256 \"${{ steps.sha256.outputs.sha256 }}\""
+
+  update-tap:
+    name: Update Homebrew Tap
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: tigger04/homebrew-tap
+          token: ${{ secrets.TAP_REPO_TOKEN }}
+          path: homebrew-tap
+
+      - name: Checkout make-audiobook
+        uses: actions/checkout@v4
+        with:
+          path: make-audiobook
+
+      - name: Determine version and SHA
+        id: info
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Download DMG to calculate SHA256
+          curl -L -o make-audiobook.dmg \
+            "https://github.com/tigger04/make-audiobook/releases/download/${GITHUB_REF_NAME}/make-audiobook-${VERSION}.dmg"
+          SHA256=$(shasum -a 256 make-audiobook.dmg | awk '{print $1}')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+
+      - name: Update cask
+        run: |
+          cd homebrew-tap
+          mkdir -p Casks
+
+          # Copy template and update version/sha256
+          cp ../make-audiobook/homebrew/Casks/make-audiobook.rb Casks/make-audiobook.rb
+          sed -i "s/version \".*\"/version \"${{ steps.info.outputs.version }}\"/" Casks/make-audiobook.rb
+          sed -i "s/sha256 \".*\"/sha256 \"${{ steps.info.outputs.sha256 }}\"/" Casks/make-audiobook.rb
+
+      - name: Update formula
+        run: |
+          cd homebrew-tap
+          mkdir -p Formula
+
+          # Get tarball SHA256
+          curl -L -o source.tar.gz \
+            "https://github.com/tigger04/make-audiobook/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
+          TARBALL_SHA256=$(shasum -a 256 source.tar.gz | awk '{print $1}')
+
+          # Copy template and update version/sha256
+          cp ../make-audiobook/homebrew/Formula/make-audiobook.rb Formula/make-audiobook.rb
+          sed -i "s|url \"https://github.com/tigger04/make-audiobook/archive/refs/tags/v.*\.tar\.gz\"|url \"https://github.com/tigger04/make-audiobook/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz\"|" Formula/make-audiobook.rb
+          sed -i "s/sha256 \".*\"/sha256 \"$TARBALL_SHA256\"/" Formula/make-audiobook.rb
+
+      - name: Commit and push
+        run: |
+          cd homebrew-tap
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add Casks/make-audiobook.rb Formula/make-audiobook.rb
+          git commit -m "Update make-audiobook to ${{ steps.info.outputs.version }}" || echo "No changes to commit"
+          git push
