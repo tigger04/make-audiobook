@@ -2,6 +2,8 @@
 
 A script to convert ebooks or any other long documents into audiobooks using Piper TTS, with support for batch processing and ID3 tagging.
 
+*[[./docs/installation.md][Installation Guide]]* | [[./docs/vision.md][Project Vision]] | [[./docs/implementation_plan.md][Implementation Plan]]
+
 ** Important
 Input files must be DRM-free. This tool cannot process DRM-protected ebooks (e.g., Kindle .azw, Adobe DRM .epub). Use DRM-free sources or legally remove DRM from files you own.
 
