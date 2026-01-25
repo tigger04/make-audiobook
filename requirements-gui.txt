@@ -1,0 +1,12 @@
+# ABOUTME: Python dependencies for the make-audiobook GUI.
+# ABOUTME: Install with: pip install -r requirements-gui.txt
+
+# Core GUI framework (LGPL licensed)
+PySide6>=6.6.0
+
+# HTTP requests for voice catalog
+requests>=2.31.0
+
+# Development/testing dependencies
+pytest>=7.0.0
+pytest-qt>=4.2.0
