@@ -61,7 +61,23 @@ sudo apt install make-audiobook
 
 ### NixOS / Nix
 
-Add to your `flake.nix`:
+Run directly without installing:
+
+```bash
+# GUI (default package)
+nix run github:tigger04/make-audiobook
+
+# CLI only
+nix run github:tigger04/make-audiobook#cli
+```
+
+Install to your profile:
+
+```bash
+nix profile install github:tigger04/make-audiobook
+```
+
+Add to your system `flake.nix`:
 
 ```nix
 {
@@ -72,10 +88,10 @@ Add to your `flake.nix`:
 }
 ```
 
-Or run directly without installing:
+Development shell (includes all dependencies, pytest, pytest-qt):
 
 ```bash
-nix run github:tigger04/make-audiobook
+nix develop github:tigger04/make-audiobook
 ```
 
 ### AppImage (Universal Linux)
