@@ -30,7 +30,10 @@ cask "make-audiobook" do
                    args: ["install", "piper-tts"],
                    sudo: false
 
-    ohai "To install default voices, run: piper-voices-setup"
+    # Install default English voices
+    ohai "Installing default voices..."
+    system_command "#{staged_path}/make-audiobook.app/Contents/Resources/scripts/piper-voices-setup",
+                   sudo: false
   end
 
   # Note: piper-tts and voices remain after uninstall.
@@ -44,8 +47,8 @@ cask "make-audiobook" do
   ]
 
   caveats <<~EOS
-    To install default English voices, run:
-      piper-voices-setup
+    Default English voices have been installed automatically.
+    To update voices, run: piper-voices-setup
 
     For additional voices, use the GUI voice browser or visit:
       https://huggingface.co/rhasspy/piper-voices
