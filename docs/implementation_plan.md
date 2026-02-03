@@ -62,22 +62,22 @@ make-audiobook/
 
 ## Implementation Phases
 
-### Phase 1: Core Infrastructure
-**Issue**: [#3](https://github.com/tigger04/make-audiobook/issues/3)
+### Phase 1: Core Infrastructure (Complete)
+**Issue**: [#3](https://github.com/tigger04/make-audiobook/issues/3) - Closed
 
 - Project structure and dependencies
 - Data models (Voice, VoiceCatalog, ConversionJob)
 - Path utilities and configuration
 
-### Phase 2: Background Workers
-**Issue**: [#4](https://github.com/tigger04/make-audiobook/issues/4)
+### Phase 2: Background Workers (Complete)
+**Issue**: [#4](https://github.com/tigger04/make-audiobook/issues/4) - Closed
 
 - CatalogWorker - fetch/cache voices.json
 - DownloadWorker - voice download with progress
 - ConversionWorker - QProcess wrapper for make-audiobook
 
-### Phase 3: UI Components
-**Issue**: [#5](https://github.com/tigger04/make-audiobook/issues/5)
+### Phase 3: UI Components (Complete)
+**Issue**: [#5](https://github.com/tigger04/make-audiobook/issues/5) - Closed
 
 - FileListWidget - drag-drop file input
 - VoiceBrowserDialog - HuggingFace catalog browser
@@ -85,19 +85,20 @@ make-audiobook/
 - SettingsPanel - conversion options
 - ProgressPanel - progress display
 
-### Phase 4: Main Window Integration
-**Issue**: [#6](https://github.com/tigger04/make-audiobook/issues/6)
+### Phase 4: Main Window Integration (Complete)
+**Issue**: [#6](https://github.com/tigger04/make-audiobook/issues/6) - Closed
 
 - MainWindow assembly with tabs
 - Menu bar and status bar
 - Application entry points
 - Configuration persistence
 
-### Phase 5: Packaging (Future)
+### Phase 5: Packaging (Complete)
 **Issue**: [#2](https://github.com/tigger04/make-audiobook/issues/2)
 
-- Cross-platform installers (.dmg, AppImage, .exe)
-- Deferred until core GUI is functional
+- macOS: .app bundle via py2app, distributed as DMG and Homebrew cask
+- Homebrew tap: `brew install --cask tigger04/tap/make-audiobook`
+- Linux/Windows: documented in installation guide
 
 ## Dependencies
 
@@ -152,8 +153,8 @@ log = Signal(str)
 
 ## Testing Strategy
 
-- **Unit tests**: Models, workers (mocked I/O)
-- **Widget tests**: pytest-qt for UI components
+- **Unit tests**: Models, workers (mocked I/O) — 264 tests passing
+- **Widget tests**: pytest-qt for all UI components (file list, settings, voice browser, voice manager, progress panel, main window)
 - **Integration tests**: Full flow with mocked subprocess
 - **Manual testing**: Documented checklist per issue
 
@@ -161,11 +162,11 @@ log = Signal(str)
 
 ```
 #1 (GUI interface - parent)
-├── #3 (Core infrastructure)
-│   └── #4 (Workers)
-│       └── #5 (UI components)
-│           └── #6 (Main window)
-└── #2 (Installers - future)
+├── #3 (Core infrastructure) ✓
+│   └── #4 (Workers) ✓
+│       └── #5 (UI components) ✓
+│           └── #6 (Main window) ✓
+└── #2 (Installers) ✓
 ```
 
 ## Notes
