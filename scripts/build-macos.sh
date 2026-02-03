@@ -53,7 +53,7 @@ OPTIONS = {
         'gui.workers',
         'gui.utils',
     ],
-    'excludes': ['tkinter', 'matplotlib', 'numpy', 'scipy'],
+    'excludes': ['tkinter', 'matplotlib', 'numpy', 'scipy', 'packaging', 'setuptools'],
     'iconfile': 'resources/icon.icns' if __import__('os').path.exists('resources/icon.icns') else None,
     'plist': {
         'CFBundleName': 'make-audiobook',
