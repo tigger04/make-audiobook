@@ -69,16 +69,18 @@ The GUI removes technical barriers. Non-technical users can:
 
 ## Roadmap
 
-### Current (v1.x)
+### v1.x (Complete)
 - [x] CLI batch processing
 - [x] Voice selection (interactive + random)
 - [x] ID3 metadata tagging
 - [x] Multiple input formats
 
-### Near-term (v2.x)
-- [ ] GUI interface (#1)
-- [ ] In-app voice management
-- [ ] Cross-platform installers (#2)
+### v2.x (Current)
+- [x] GUI interface (#1)
+- [x] In-app voice management
+- [x] macOS Homebrew cask and formula (#15)
+- [x] Nix flake (#10)
+- [ ] Cross-platform installers - Linux/Windows (#2)
 
 ### Future Considerations
 - Chapter detection and splitting
