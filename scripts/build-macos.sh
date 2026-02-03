@@ -76,8 +76,9 @@ setup(
 )
 SETUP_EOF
 
-# Replace version placeholder
-sed -i '' "s/__VERSION__/$VERSION/g" "$BUILD_DIR/setup.py"
+# Replace version placeholder (portable: avoids sed -i which differs between GNU/macOS)
+sed "s/__VERSION__/$VERSION/g" "$BUILD_DIR/setup.py" > "$BUILD_DIR/setup.py.tmp"
+mv "$BUILD_DIR/setup.py.tmp" "$BUILD_DIR/setup.py"
 
 # Copy setup.py to project root for py2app
 cp "$BUILD_DIR/setup.py" "$PROJECT_DIR/setup.py"
