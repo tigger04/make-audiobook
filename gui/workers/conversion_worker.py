@@ -27,11 +27,13 @@ class ConversionWorker(QObject):
     Signals:
         progress(str, int): Filename and progress percentage
         finished(str, bool): Filename and success status
+        error(str): Human-readable error message
         log(str): Log message from process output
     """
 
     progress = Signal(str, int)
     finished = Signal(str, bool)
+    error = Signal(str)
     log = Signal(str)
 
     def __init__(
@@ -62,6 +64,7 @@ class ConversionWorker(QObject):
         self._process.readyReadStandardError.connect(self._on_stderr_ready)
         self._process.started.connect(self._on_process_started)
         self._process.finished.connect(self._on_process_finished)
+        self._process.errorOccurred.connect(self._on_process_error)
 
         # Set up environment with expanded PATH for macOS app bundle
         env = QProcessEnvironment.systemEnvironment()
@@ -74,6 +77,7 @@ class ConversionWorker(QObject):
 
         logger.info("Starting conversion: %s %s", program, " ".join(args))
         logger.debug("PATH: %s", env.value("PATH"))
+        self.log.emit(f"Running: {program} {' '.join(args)}")
         self._process.start(program, args)
 
     def run(self) -> None:
@@ -184,6 +188,32 @@ class ConversionWorker(QObject):
 
         filename = str(self._current_file) if self._current_file else ""
         self.finished.emit(filename, success)
+
+    _PROCESS_ERROR_MESSAGES = {
+        QProcess.ProcessError.FailedToStart: "Script not found or not executable",
+        QProcess.ProcessError.Crashed: "Conversion process crashed",
+        QProcess.ProcessError.Timedout: "Conversion process timed out",
+        QProcess.ProcessError.WriteError: "Could not send data to process",
+        QProcess.ProcessError.ReadError: "Could not read process output",
+        QProcess.ProcessError.UnknownError: "Unknown process error",
+    }
+
+    def _on_process_error(self, error_code: QProcess.ProcessError) -> None:
+        """Handle QProcess errors (e.g., script not found).
+
+        FailedToStart does not emit finished(), so we must emit
+        both error and finished signals here to unblock the UI.
+        """
+        message = self._PROCESS_ERROR_MESSAGES.get(error_code, f"Process error {error_code}")
+        logger.error("QProcess error: %s", message)
+        self._job.status = JobStatus.FAILED
+        self._job.error_message = message
+        self.error.emit(message)
+
+        # FailedToStart never emits finished(), so emit it here
+        if error_code == QProcess.ProcessError.FailedToStart:
+            filename = str(self._current_file) if self._current_file else ""
+            self.finished.emit(filename, False)
 
     def cancel(self) -> None:
         """Cancel the conversion process."""

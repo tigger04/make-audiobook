@@ -30,7 +30,7 @@ class ConversionJob:
         voice_key: Voice identifier (e.g., "en_US-ryan-high"), or None for selection
         random_voice: Use random voice selection
         random_filter: Quality filter when using random voice (e.g., "medium")
-        length_scale: Speech speed (1.0 = normal, higher = slower)
+        length_scale: Piper length_scale (1.0 = normal, lower = faster)
         author: ID3 author tag value
         title: ID3 album/book title tag value
         status: Current job status
@@ -45,7 +45,7 @@ class ConversionJob:
     voice_key: Optional[str] = None
     random_voice: bool = False
     random_filter: Optional[str] = None
-    length_scale: float = 1.5
+    length_scale: float = 1.0
     author: Optional[str] = None
     title: Optional[str] = None
     status: JobStatus = JobStatus.PENDING

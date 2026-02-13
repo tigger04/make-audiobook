@@ -8,6 +8,8 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 
+from PySide6.QtCore import QProcess
+
 from gui.workers.conversion_worker import ConversionWorker
 from gui.models.conversion_job import ConversionJob, JobStatus
 
@@ -189,3 +191,54 @@ class TestConversionWorker:
 
         assert len(log_messages) == 1
         assert "Error" in log_messages[0]
+
+    def test_worker_has_error_signal(self, qapp, sample_job):
+        """Test ConversionWorker has error signal."""
+        worker = ConversionWorker(job=sample_job)
+        assert hasattr(worker, "error")
+
+    def test_worker_emits_error_on_failed_to_start(self, qapp, sample_job):
+        """Test ConversionWorker emits error when process fails to start."""
+        worker = ConversionWorker(job=sample_job)
+
+        error_messages = []
+        worker.error.connect(lambda msg: error_messages.append(msg))
+
+        finished_results = []
+        worker.finished.connect(lambda f, s: finished_results.append((f, s)))
+
+        # Simulate FailedToStart error
+        worker._on_process_error(QProcess.ProcessError.FailedToStart)
+
+        assert len(error_messages) == 1
+        assert "not found" in error_messages[0].lower() or "not executable" in error_messages[0].lower()
+        assert sample_job.status == JobStatus.FAILED
+
+        # FailedToStart must also emit finished to unblock the UI
+        assert len(finished_results) == 1
+        assert finished_results[0][1] is False
+
+    def test_worker_emits_error_on_crash(self, qapp, sample_job):
+        """Test ConversionWorker emits error when process crashes."""
+        worker = ConversionWorker(job=sample_job)
+
+        error_messages = []
+        worker.error.connect(lambda msg: error_messages.append(msg))
+
+        worker._on_process_error(QProcess.ProcessError.Crashed)
+
+        assert len(error_messages) == 1
+        assert "crashed" in error_messages[0].lower()
+        assert sample_job.status == JobStatus.FAILED
+
+    def test_worker_error_on_crash_does_not_emit_finished(self, qapp, sample_job):
+        """Test Crashed error does not emit finished (Qt emits it separately)."""
+        worker = ConversionWorker(job=sample_job)
+
+        finished_results = []
+        worker.finished.connect(lambda f, s: finished_results.append((f, s)))
+
+        worker._on_process_error(QProcess.ProcessError.Crashed)
+
+        # Crashed emits finished from Qt, so we should not double-emit
+        assert len(finished_results) == 0

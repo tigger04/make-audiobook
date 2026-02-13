@@ -35,27 +35,36 @@ COMMON_BIN_PATHS = [
 
 
 def get_expanded_path() -> str:
-    """Return PATH with common binary locations added.
+    """Return PATH with common binary locations prepended.
 
     When launched as a macOS .app bundle, the process may not have
-    the user's shell PATH. This function expands PATH to include
-    common locations where Homebrew, pipx, and system tools are found.
+    the user's shell PATH. This function prepends common locations
+    (Homebrew, pipx, etc.) so they take priority over system defaults.
+    This ensures e.g. /opt/homebrew/bin/bash (5+) is found before
+    /bin/bash (3.2) when resolving `#!/usr/bin/env bash`.
 
     Returns:
-        Colon-separated PATH string with common locations included.
+        Colon-separated PATH string with common locations prepended.
     """
     current_path = os.environ.get("PATH", "")
-    current_entries = set(current_path.split(os.pathsep)) if current_path else set()
+    current_parts = current_path.split(os.pathsep) if current_path else []
 
-    # Expand ~ in common paths and add to set
-    expanded_entries = list(current_entries)
+    # Prepend common paths so Homebrew/user tools take priority
+    prepend_entries: list[str] = []
+    seen: set[str] = set()
     for path in COMMON_BIN_PATHS:
         expanded = os.path.expanduser(path)
-        if expanded not in current_entries:
-            expanded_entries.append(expanded)
-            current_entries.add(expanded)
+        if expanded not in seen:
+            prepend_entries.append(expanded)
+            seen.add(expanded)
 
-    return os.pathsep.join(expanded_entries)
+    # Append existing PATH entries, skipping duplicates
+    for entry in current_parts:
+        if entry and entry not in seen:
+            prepend_entries.append(entry)
+            seen.add(entry)
+
+    return os.pathsep.join(prepend_entries)
 
 
 def find_executable(name: str) -> Optional[Path]:

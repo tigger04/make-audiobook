@@ -59,51 +59,48 @@ class SettingsPanel(QWidget):
 
         # Voice selection group
         voice_group = QGroupBox("Voice")
-        voice_layout = QFormLayout(voice_group)
+        voice_inner = QVBoxLayout(voice_group)
+        voice_inner.setSpacing(8)
 
         self._voice_selector = QComboBox()
-        voice_layout.addRow("Voice:", self._voice_selector)
+        voice_inner.addWidget(self._voice_selector)
 
-        self._random_checkbox = QCheckBox("Use random voice")
-        voice_layout.addRow("", self._random_checkbox)
+        random_row = QHBoxLayout()
+        self._random_checkbox = QCheckBox("Random")
+        random_row.addWidget(self._random_checkbox)
+
+        self._random_filter_label = QLabel("Quality:")
+        self._random_filter_label.setVisible(False)
+        random_row.addWidget(self._random_filter_label)
 
         self._random_filter = QComboBox()
         self._random_filter.addItems(["Any", "High", "Medium", "Low"])
         self._random_filter.setVisible(False)
-        self._random_filter_label = QLabel("Quality:")
-        self._random_filter_label.setVisible(False)
+        random_row.addWidget(self._random_filter)
 
-        random_layout = QHBoxLayout()
-        random_layout.addWidget(self._random_filter_label)
-        random_layout.addWidget(self._random_filter)
-        random_layout.addStretch()
-        voice_layout.addRow("", random_layout)
+        random_row.addStretch()
+        voice_inner.addLayout(random_row)
 
         layout.addWidget(voice_group)
 
         # Speed group
         speed_group = QGroupBox("Speed")
-        speed_layout = QFormLayout(speed_group)
+        speed_layout = QVBoxLayout(speed_group)
 
-        slider_layout = QHBoxLayout()
+        slider_row = QHBoxLayout()
         self._speed_slider = QSlider(Qt.Horizontal)
-        self._speed_slider.setMinimum(5)   # 0.5
-        self._speed_slider.setMaximum(30)  # 3.0
-        self._speed_slider.setValue(15)    # 1.5 default
+        self._speed_slider.setMinimum(1)   # 0.1x
+        self._speed_slider.setMaximum(30)  # 3.0x
+        self._speed_slider.setValue(10)    # 1.0x default (normal speed)
         self._speed_slider.setTickPosition(QSlider.TicksBelow)
         self._speed_slider.setTickInterval(5)
 
-        self._speed_display = QLabel("1.5x")
+        self._speed_display = QLabel("1.0x")
         self._speed_display.setMinimumWidth(40)
 
-        slider_layout.addWidget(self._speed_slider)
-        slider_layout.addWidget(self._speed_display)
-
-        speed_layout.addRow("Length Scale:", slider_layout)
-
-        speed_hint = QLabel("Higher values = slower speech. Default: 1.5")
-        speed_hint.setStyleSheet("color: gray; font-size: 0.9em;")
-        speed_layout.addRow("", speed_hint)
+        slider_row.addWidget(self._speed_slider)
+        slider_row.addWidget(self._speed_display)
+        speed_layout.addLayout(slider_row)
 
         layout.addWidget(speed_group)
 
@@ -135,7 +132,6 @@ class SettingsPanel(QWidget):
     def _populate_voices(self) -> None:
         """Populate voice selector with installed voices."""
         self._voice_selector.clear()
-        self._voice_selector.addItem("Random", None)
 
         for voice in self._installed_voices:
             # Display: "Ryan (en_US) - high"
@@ -155,8 +151,8 @@ class SettingsPanel(QWidget):
 
     def _on_speed_changed(self, value: int) -> None:
         """Handle speed slider change."""
-        scale = value / 10.0
-        self._speed_display.setText(f"{scale:.1f}x")
+        speed = value / 10.0
+        self._speed_display.setText(f"{speed:.1f}x")
         self._on_settings_changed()
 
     def get_selected_voice(self) -> Optional[str]:
@@ -189,13 +185,28 @@ class SettingsPanel(QWidget):
             return None
         return text
 
-    def get_length_scale(self) -> float:
-        """Get the length_scale value."""
+    def get_speed(self) -> float:
+        """Get the user-facing speed multiplier (e.g., 1.5 = 50% faster)."""
         return self._speed_slider.value() / 10.0
 
-    def set_length_scale(self, value: float) -> None:
-        """Set the length_scale value."""
+    def set_speed(self, value: float) -> None:
+        """Set the user-facing speed multiplier."""
         self._speed_slider.setValue(int(value * 10))
+
+    def get_length_scale(self) -> float:
+        """Get Piper's length_scale value (inverse of speed).
+
+        Speed 1.0x = length_scale 1.0 (normal).
+        Speed 1.5x = length_scale 0.667 (faster speech).
+        Speed 0.5x = length_scale 2.0 (slower speech).
+        """
+        speed = self.get_speed()
+        return round(1.0 / speed, 3)
+
+    def set_length_scale(self, value: float) -> None:
+        """Set speed from a Piper length_scale value (for config compat)."""
+        speed = round(1.0 / value, 1) if value > 0 else 1.0
+        self.set_speed(speed)
 
     def get_author(self) -> str:
         """Get the author field value (trimmed)."""

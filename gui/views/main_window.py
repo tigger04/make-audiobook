@@ -170,8 +170,8 @@ class MainWindow(QMainWindow):
             )
 
         # Restore settings
-        if self._config.get("length_scale"):
-            self._settings_panel.set_length_scale(self._config["length_scale"])
+        if self._config.get("speed"):
+            self._settings_panel.set_speed(self._config["speed"])
 
     def _save_config(self) -> None:
         """Save current configuration."""
@@ -181,7 +181,7 @@ class MainWindow(QMainWindow):
             "width": self.width(),
             "height": self.height(),
         }
-        self._config["length_scale"] = self._settings_panel.get_length_scale()
+        self._config["speed"] = self._settings_panel.get_speed()
         self._config["last_voice"] = self._settings_panel.get_selected_voice()
 
         save_config(self._config)
@@ -251,6 +251,7 @@ class MainWindow(QMainWindow):
         self._conversion_thread.started.connect(self._conversion_worker.start)
         self._conversion_worker.progress.connect(self._on_conversion_progress)
         self._conversion_worker.log.connect(self._progress_panel.add_log)
+        self._conversion_worker.error.connect(self._on_conversion_error)
         self._conversion_worker.finished.connect(self._on_conversion_finished)
 
         self._progress_panel.reset()
@@ -264,6 +265,11 @@ class MainWindow(QMainWindow):
         """Handle conversion progress update."""
         self._progress_panel.set_current_file(filename)
         self._progress_panel.set_file_progress(percent)
+
+    def _on_conversion_error(self, message: str) -> None:
+        """Handle conversion process error (e.g., script not found)."""
+        self._last_conversion_error = message
+        self._progress_panel.add_log(f"Error: {message}")
 
     def _on_conversion_finished(self, filename: str, success: bool) -> None:
         """Handle conversion completion."""
@@ -279,8 +285,16 @@ class MainWindow(QMainWindow):
             self._progress_panel.set_status("Conversion complete!")
             self._progress_panel.set_overall_progress(100)
         else:
+            error_detail = getattr(self, "_last_conversion_error", "")
+            self._last_conversion_error = ""
+            detail = f"\n\n{error_detail}" if error_detail else ""
             self._progress_panel.set_status("Conversion failed")
-            QMessageBox.warning(self, "Conversion Failed", f"Failed to convert {filename}")
+            self._progress_panel.show_log()
+            QMessageBox.warning(
+                self,
+                "Conversion Failed",
+                f"Failed to convert {filename}{detail}\n\nSee the log panel for details.",
+            )
 
     def _on_cancel_clicked(self) -> None:
         """Handle cancel button click."""

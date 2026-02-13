@@ -77,24 +77,23 @@ class TestSettingsPanel:
     def test_voice_selector_has_installed_voices(self, panel, installed_voices):
         """Test voice selector lists installed voices."""
         count = panel._voice_selector.count()
-        # Should have voices plus possibly "Random" option
-        assert count >= len(installed_voices)
+        assert count == len(installed_voices)
 
-    def test_voice_selector_has_random_option(self, panel):
-        """Test voice selector has 'Random' option."""
-        has_random = False
+    def test_voice_selector_has_no_random_option(self, panel):
+        """Test voice selector only lists real voices, not 'Random'."""
         for i in range(panel._voice_selector.count()):
-            if "random" in panel._voice_selector.itemText(i).lower():
-                has_random = True
-                break
-        assert has_random
+            assert "random" not in panel._voice_selector.itemText(i).lower()
 
-    def test_get_selected_voice(self, panel, installed_voices):
-        """Test getting currently selected voice."""
-        panel._voice_selector.setCurrentIndex(1)
+    def test_get_selected_voice_returns_voice_key(self, panel, installed_voices):
+        """Test getting currently selected voice returns a voice key."""
+        panel._voice_selector.setCurrentIndex(0)
         voice = panel.get_selected_voice()
-        # Either a voice key or None (if random selected)
-        assert voice is None or isinstance(voice, str)
+        assert voice == installed_voices[0].key
+
+    def test_get_selected_voice_returns_none_in_random_mode(self, panel):
+        """Test getting selected voice returns None when random mode is on."""
+        panel.set_random_mode(True)
+        assert panel.get_selected_voice() is None
 
     def test_random_voice_mode(self, panel):
         """Test random voice mode selection."""
@@ -120,28 +119,46 @@ class TestSettingsPanel:
         assert panel.get_random_filter() == "medium"
 
     def test_speed_slider_range(self, panel):
-        """Test speed slider has correct range (0.5 to 3.0)."""
-        # Slider uses integer values multiplied by 10
+        """Test speed slider has correct range (0.1x to 3.0x)."""
         min_val = panel._speed_slider.minimum()
         max_val = panel._speed_slider.maximum()
-        assert min_val == 5  # 0.5 * 10
-        assert max_val == 30  # 3.0 * 10
+        assert min_val == 1   # 0.1x
+        assert max_val == 30  # 3.0x
 
     def test_speed_slider_default(self, panel):
-        """Test speed slider defaults to 1.5."""
-        value = panel.get_length_scale()
-        assert value == 1.5
+        """Test speed slider defaults to 1.0x (normal speed)."""
+        assert panel.get_speed() == 1.0
 
-    def test_set_length_scale(self, panel):
-        """Test setting length scale."""
-        panel.set_length_scale(2.0)
+    def test_set_speed(self, panel):
+        """Test setting speed multiplier."""
+        panel.set_speed(1.5)
+        assert panel.get_speed() == 1.5
+
+    def test_speed_to_length_scale_normal(self, panel):
+        """Test 1.0x speed produces length_scale 1.0 (normal)."""
+        panel.set_speed(1.0)
+        assert panel.get_length_scale() == 1.0
+
+    def test_speed_to_length_scale_faster(self, panel):
+        """Test 2.0x speed produces length_scale 0.5 (faster speech)."""
+        panel.set_speed(2.0)
+        assert panel.get_length_scale() == 0.5
+
+    def test_speed_to_length_scale_slower(self, panel):
+        """Test 0.5x speed produces length_scale 2.0 (slower speech)."""
+        panel.set_speed(0.5)
         assert panel.get_length_scale() == 2.0
+
+    def test_set_length_scale_compat(self, panel):
+        """Test set_length_scale converts old config values to speed."""
+        panel.set_length_scale(1.5)
+        assert panel.get_speed() == 0.7  # 1/1.5 rounded to 0.7
 
     def test_speed_display_updates(self, panel, qapp):
         """Test speed display label updates with slider."""
-        panel.set_length_scale(1.8)
+        panel.set_speed(1.5)
         text = panel._speed_display.text()
-        assert "1.8" in text
+        assert "1.5" in text
 
     def test_get_author(self, panel):
         """Test getting author field value."""

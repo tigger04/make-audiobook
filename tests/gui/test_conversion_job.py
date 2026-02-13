@@ -59,9 +59,9 @@ class TestConversionJob:
         assert job.title == "Pride and Prejudice"
 
     def test_job_default_length_scale(self):
-        """Test default length_scale is 1.5."""
+        """Test default length_scale is 1.0 (normal speed)."""
         job = ConversionJob(files=[])
-        assert job.length_scale == 1.5
+        assert job.length_scale == 1.0
 
     def test_job_random_voice_flag(self):
         """Test random voice selection flag."""

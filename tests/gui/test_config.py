@@ -63,13 +63,13 @@ class TestConfig:
         """Test default config has all expected keys."""
         config = get_default_config()
         assert "last_voice" in config
-        assert "length_scale" in config
+        assert "speed" in config
         assert "window_geometry" in config
 
-    def test_default_length_scale_is_1_5(self):
-        """Test default length_scale is 1.5."""
+    def test_default_speed_is_1_0(self):
+        """Test default speed is 1.0x (normal)."""
         config = get_default_config()
-        assert config["length_scale"] == 1.5
+        assert config["speed"] == 1.0
 
     def test_save_config_creates_file(self, config_file):
         """Test save_config creates the config file."""
@@ -93,12 +93,11 @@ class TestConfig:
 
     def test_load_config_reads_file(self, config_file):
         """Test load_config reads saved values from file."""
-        saved = {"last_voice": "en_US-ryan-high", "length_scale": 1.2}
+        saved = {"last_voice": "en_US-ryan-high", "speed": 1.5}
         config_file.write_text(json.dumps(saved))
         result = load_config(config_file)
-        # Saved values should be present
         assert result["last_voice"] == "en_US-ryan-high"
-        assert result["length_scale"] == 1.2
+        assert result["speed"] == 1.5
 
     def test_load_config_returns_default_for_missing_file(self, config_file):
         """Test load_config returns default when file missing."""
@@ -115,24 +114,38 @@ class TestConfig:
         """Test config survives save/load cycle with saved values preserved."""
         original = {
             "last_voice": "en_GB-alba-medium",
-            "length_scale": 1.8,
+            "speed": 1.5,
             "window_geometry": {"x": 100, "y": 200, "width": 800, "height": 600},
         }
         save_config(original, config_file)
         loaded = load_config(config_file)
-        # Saved values should be preserved
         assert loaded["last_voice"] == original["last_voice"]
-        assert loaded["length_scale"] == original["length_scale"]
+        assert loaded["speed"] == original["speed"]
         assert loaded["window_geometry"] == original["window_geometry"]
 
     def test_config_merges_with_defaults(self, config_file):
         """Test partial config merges with defaults."""
-        # Save only partial config
         partial = {"last_voice": "test-voice"}
         config_file.write_text(json.dumps(partial))
 
         result = load_config(config_file)
-        # Should have saved value
         assert result["last_voice"] == "test-voice"
-        # Should have default for missing keys
-        assert result["length_scale"] == 1.5
+        assert result["speed"] == 1.0
+
+    def test_config_migrates_old_length_scale(self, config_file):
+        """Test old length_scale config is migrated to speed."""
+        old_config = {"last_voice": "en_US-ryan-high", "length_scale": 1.5}
+        config_file.write_text(json.dumps(old_config))
+
+        result = load_config(config_file)
+        # length_scale 1.5 -> speed 1/1.5 = 0.7
+        assert result["speed"] == 0.7
+        assert "length_scale" not in result
+
+    def test_config_migrates_old_length_scale_1_0(self, config_file):
+        """Test old length_scale 1.0 migrates to speed 1.0."""
+        old_config = {"length_scale": 1.0}
+        config_file.write_text(json.dumps(old_config))
+
+        result = load_config(config_file)
+        assert result["speed"] == 1.0

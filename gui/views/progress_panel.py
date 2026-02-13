@@ -91,7 +91,8 @@ class ProgressPanel(QWidget):
 
         self._log_output = QTextEdit()
         self._log_output.setReadOnly(True)
-        self._log_output.setMaximumHeight(150)
+        self._log_output.setMinimumHeight(80)
+        self._log_output.setMaximumHeight(200)
         log_layout.addWidget(self._log_output)
 
         layout.addWidget(self._log_group)
@@ -132,6 +133,10 @@ class ProgressPanel(QWidget):
     def clear_log(self) -> None:
         """Clear the log output."""
         self._log_output.clear()
+
+    def show_log(self) -> None:
+        """Expand the log panel so log messages are visible."""
+        self._log_group.setChecked(True)
 
     def set_running(self, running: bool) -> None:
         """Set running state (enables/disables cancel button)."""

@@ -19,7 +19,7 @@ def get_default_config() -> dict[str, Any]:
     """Return the default configuration dictionary."""
     return {
         "last_voice": None,
-        "length_scale": 1.5,
+        "speed": 1.0,
         "random_voice": False,
         "random_filter": None,
         "window_geometry": None,
@@ -65,6 +65,15 @@ def load_config(config_path: Path = CONFIG_FILE) -> dict[str, Any]:
         # Merge with defaults (loaded values override defaults)
         result = defaults.copy()
         result.update(loaded)
+
+        # Migrate old length_scale config to speed
+        if "length_scale" in result and "speed" not in loaded:
+            ls = result.pop("length_scale")
+            if isinstance(ls, (int, float)) and ls > 0:
+                result["speed"] = round(1.0 / ls, 1)
+        elif "length_scale" in result:
+            result.pop("length_scale")
+
         return result
 
     except (json.JSONDecodeError, IOError) as e:
