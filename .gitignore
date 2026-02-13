@@ -1,0 +1,30 @@
+# Build artifacts
+build/
+dist/
+*.egg-info/
+setup.py
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Test/CI
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Config (user-specific)
+*.env
