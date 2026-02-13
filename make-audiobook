@@ -44,10 +44,12 @@ USAGE:
    $cmd_base [OPTIONS] TEXT_FILE [TEXT_FILE2 ...]
 
 WTF:
-   Convert text file(s) to audio using Piper TTS.
+   Convert document(s) to audio using Piper TTS.
+   Supports: txt, epub, docx, md, html, pdf, mobi.
    Supports batch processing with ID3 tagging.
-   On first run, if no Piper voices found, the script will prompt to run 
+   On first run, if no Piper voices found, the script will prompt to run
    piper-voices-setup which downloads a bunch of voices.
+   Note: .mobi support requires Calibre (ebook-convert).
 
 OPTIONS:
    -u / --update-voices (update installed Piper voices)
@@ -166,15 +168,33 @@ read -r book_title
 # Function to extract track number from filename
 extract_track_number() {
    local filename="$1"
-   local basename
-   basename=$(basename "$filename" .txt)
+   local base_name
+   base_name="$(strip_extension "$filename")"
 
    # Look for clear integers in the filename
-   if [[ $basename =~ ([0-9]+) ]]; then
+   if [[ $base_name =~ ([0-9]+) ]]; then
       echo "${BASH_REMATCH[1]}"
    else
       echo ""
    fi
+}
+
+# Function to strip the file extension from a path
+strip_extension() {
+   local filename="$1"
+   local base
+   base="$(basename "$filename")"
+   # Strip known extensions
+   case "${base,,}" in
+      *.mobi) echo "${base%.mobi}" ;;
+      *.epub) echo "${base%.epub}" ;;
+      *.docx) echo "${base%.docx}" ;;
+      *.html) echo "${base%.html}" ;;
+      *.pdf)  echo "${base%.pdf}" ;;
+      *.md)   echo "${base%.md}" ;;
+      *.txt)  echo "${base%.txt}" ;;
+      *)      echo "$base" ;;
+   esac
 }
 
 # Function to convert a single file
@@ -190,24 +210,39 @@ convert_file() {
       die "No voice model could be determined"
    fi
 
-   # Generate output filename based on input
-   local target_mp3
-   target_mp3="$(dirname "${input_text_file}")/$(basename "${input_text_file}" .txt).mp3"
+   # Generate output filename based on input (strip any known extension)
+   local target_mp3 base_name
+   base_name="$(strip_extension "$input_text_file")"
+   target_mp3="$(dirname "${input_text_file}")/${base_name}.mp3"
 
    hline "$(basename "$input_text_file") -> $target_mp3"
 
    mv_bak_if "$target_mp3"
 
-   local tmpdir txt wav temp_tagged
+   local tmpdir txt wav temp_tagged pandoc_input
 
    read -r tmpdir < <(mktemp -d)
    txt="$tmpdir/tmp.txt"
    wav="$tmpdir/tmp.wav"
+   pandoc_input="$input_text_file"
 
    register_for_cleanup "$tmpdir" "$txt" "$wav"
 
+   # Pre-convert .mobi files using Calibre's ebook-convert
+   case "${input_text_file,,}" in
+      *.mobi)
+         if ! command -v ebook-convert &>/dev/null; then
+            die "ebook-convert not found. Install Calibre: brew install calibre"
+         fi
+         local epub_tmp="$tmpdir/converted.epub"
+         info "Converting .mobi to .epub via ebook-convert"
+         ebook-convert "$input_text_file" "$epub_tmp" --no-default-epub-cover
+         pandoc_input="$epub_tmp"
+         ;;
+   esac
+
    info "Converting $input_text_file to plain text"
-   pandoc "$input_text_file" --to plain --wrap=none -o "$txt"
+   pandoc "$pandoc_input" --to plain --wrap=none -o "$txt"
 
    #  clean up text, from experience we need to
    #  - remove all html/xml artefacts

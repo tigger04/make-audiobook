@@ -27,7 +27,7 @@ def widget(qapp):
 def sample_files(tmp_path):
     """Create sample files for testing."""
     files = []
-    for ext in [".txt", ".epub", ".md", ".html", ".docx", ".pdf"]:
+    for ext in [".txt", ".epub", ".md", ".html", ".docx", ".pdf", ".mobi"]:
         f = tmp_path / f"test{ext}"
         f.write_text("content")
         files.append(f)
@@ -95,6 +95,14 @@ class TestFileListWidget:
         assert ".md" in SUPPORTED_EXTENSIONS
         assert ".html" in SUPPORTED_EXTENSIONS
         assert ".pdf" in SUPPORTED_EXTENSIONS
+        assert ".mobi" in SUPPORTED_EXTENSIONS
+
+    def test_add_mobi_file(self, widget, tmp_path):
+        """Test adding a .mobi file to the list."""
+        mobi_file = tmp_path / "book.mobi"
+        mobi_file.write_text("content")
+        widget.add_file(mobi_file)
+        assert widget.file_count() == 1
 
     def test_reject_unsupported_extension(self, widget, tmp_path):
         """Test rejecting files with unsupported extensions."""
@@ -170,3 +178,7 @@ class TestSupportedExtensions:
     def test_pdf_supported(self):
         """Test .pdf files are supported."""
         assert ".pdf" in SUPPORTED_EXTENSIONS
+
+    def test_mobi_supported(self):
+        """Test .mobi files are supported."""
+        assert ".mobi" in SUPPORTED_EXTENSIONS

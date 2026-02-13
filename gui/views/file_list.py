@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 logger = logging.getLogger(__name__)
 
 # Supported file extensions for conversion
-SUPPORTED_EXTENSIONS = frozenset([".txt", ".epub", ".docx", ".md", ".html", ".pdf"])
+SUPPORTED_EXTENSIONS = frozenset([".txt", ".epub", ".docx", ".md", ".html", ".pdf", ".mobi"])
 
 
 class FileListModel(QAbstractListModel):
