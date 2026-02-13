@@ -2,7 +2,7 @@
 # ABOUTME: Copy this file to tigger04/homebrew-tap/Casks/ after building a release.
 
 cask "make-audiobook" do
-  version "0.1.0"
+  version "2.3.0"
   sha256 "UPDATE_WITH_ACTUAL_SHA256"
 
   url "https://github.com/tigger04/make-audiobook/releases/download/v#{version}/make-audiobook-#{version}.dmg"
@@ -11,6 +11,7 @@ cask "make-audiobook" do
   homepage "https://github.com/tigger04/make-audiobook"
 
   # System dependencies installed via Homebrew
+  depends_on formula: "calibre"  # for .mobi file support
   depends_on formula: "ffmpeg"
   depends_on formula: "pandoc"
   depends_on formula: "fzf"

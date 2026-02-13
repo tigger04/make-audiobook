@@ -99,9 +99,22 @@ release:
 	@echo "Building macOS DMG..."
 	./scripts/build-macos.sh $(RELEASE_VERSION)
 	@echo ""
+	@echo "Updating Homebrew formula and cask..."
+	@DMG_PATH="dist/make-audiobook-$(RELEASE_VERSION).dmg"; \
+	if [ -f "$$DMG_PATH" ]; then \
+		SHA256=$$(shasum -a 256 "$$DMG_PATH" | awk '{print $$1}'); \
+		./scripts/update-homebrew.sh "$(RELEASE_VERSION)" "$$SHA256"; \
+	else \
+		./scripts/update-homebrew.sh "$(RELEASE_VERSION)"; \
+	fi
+	@echo ""
+	@echo "Committing Homebrew updates..."
+	git add homebrew/Formula/make-audiobook.rb homebrew/Casks/make-audiobook.rb
+	git commit -m "chore: update Homebrew formula and cask to $(RELEASE_VERSION)" || echo "No Homebrew changes to commit"
+	@echo ""
 	@echo "Tagging v$(RELEASE_VERSION)..."
 	git tag -a "v$(RELEASE_VERSION)" -m "Release $(RELEASE_VERSION)"
-	git push origin "v$(RELEASE_VERSION)"
+	git push origin master "v$(RELEASE_VERSION)"
 	@echo ""
 	@echo "=== Release Summary ==="
 	@echo "Version: $(RELEASE_VERSION)"
