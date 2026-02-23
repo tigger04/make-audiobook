@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# ABOUTME: Shell entry point for the make-audiobook GUI.
+# ABOUTME: Launches the PySide6 graphical interface.
+
+set -euo pipefail
+
+# Get the directory containing this script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Check for virtual environment
+if [[ -d "$SCRIPT_DIR/.venv" ]]; then
+    source "$SCRIPT_DIR/.venv/bin/activate"
+fi
+
+# Run the GUI module
+exec python3 -m gui "$@"

@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
+# ABOUTME: Install/update selected Piper voices by downloading individual files.
+# ABOUTME: Stores voices in nested structure: ~/.local/share/piper/voices/{lang}/{voice_key}/
+
 # shellcheck source=shell-and-scripting-helpers/.qfuncs.sh
 source "$(dirname "$0")"/shell-and-scripting-helpers/.qfuncs.sh
-
-set -e
-
-#!/usr/bin/env bash
-# Install/update selected Piper voices by downloading individual files.
-# Destination: ~/.local/share/piper/voices
 
 set -euo pipefail
 
@@ -57,60 +54,89 @@ voices=(
 
 mkdir -p "$dest"
 
+# Migrate any existing flat-structure voices to nested structure.
+# Old layout: $dest/en_US-lessac-high.onnx
+# New layout: $dest/en_US/en_US-lessac-high/en_US-lessac-high.onnx
+migrated=()
+for flat_file in "$dest"/*.onnx; do
+   if [[ -f "$flat_file" ]]; then
+      voice_key=$(basename "$flat_file" .onnx)
+      lang="${voice_key%%-*}"
+      nested_dir="$dest/$lang/$voice_key"
+      if [[ ! -d "$nested_dir" ]]; then
+         mkdir -p "$nested_dir"
+         mv "$flat_file" "$nested_dir/"
+         # Move the .onnx.json too if it exists
+         if [[ -f "$dest/$voice_key.onnx.json" ]]; then
+            mv "$dest/$voice_key.onnx.json" "$nested_dir/"
+         fi
+         migrated+=("$voice_key")
+      fi
+   fi
+done
+
+if [[ ${#migrated[@]} -gt 0 ]]; then
+   info "Migrated ${#migrated[@]} voice(s) to nested directory structure:"
+   printf "  • %s\n" "${migrated[@]}" >&2
+fi
+
 success=()
 fails=()
 already=()
 
 for voice in "${voices[@]}"; do
-   # Extract the filename from the voice path (everything after the last /)
-   voice_filename=$(basename "$voice")
+   # Extract the voice key from the path (everything after the last /)
+   voice_key=$(basename "$voice")
+   # Extract language code (everything before the first dash)
+   lang="${voice_key%%-*}"
 
-   mkdir -p "$dest"
+   voice_dir="$dest/$lang/$voice_key"
+   mkdir -p "$voice_dir"
 
    for ext in onnx onnx.json; do
       source_url="$base_url/$voice.$ext"
-      target_path="$dest/$voice_filename.$ext"
+      target_path="$voice_dir/$voice_key.$ext"
 
-      if [ -e "$target_path" ]; then
-         warn "Skipping $(basename "$target_path")"
-         already+=("$voice_filename.$ext")
+      if [[ -e "$target_path" ]]; then
+         warn "Skipping $voice_key.$ext"
+         already+=("$voice_key.$ext")
       else
-         info "Downloading $voice_filename.$ext ..."
+         info "Downloading $voice_key.$ext ..."
          if command -v curl >/dev/null 2>&1; then
             curl -L --fail -o "$target_path" "$source_url" || {
                errortext "Failed to download $source_url"
-               fails+=("$voice_filename.$ext")
+               fails+=("$voice_key.$ext")
                continue
             }
          elif command -v wget >/dev/null 2>&1; then
             wget -O "$target_path" "$source_url" || {
                errortext "Failed to download $source_url"
-               fails+=("$voice_filename.$ext")
+               fails+=("$voice_key.$ext")
                continue
             }
          else
             die "curl or wget required to download voices."
          fi
-         if [ -e "$target_path" ]; then
-            success+=("$voice_filename.$ext")
+         if [[ -e "$target_path" ]]; then
+            success+=("$voice_key.$ext")
          fi
       fi
    done
 done
 
-[ ${#success[@]} -eq 0 ] || {
-   checktext Successfully downloaded:
-   printf "• %s\n" "${success[@]}" >&2
-}
+if [[ ${#success[@]} -gt 0 ]]; then
+   checktext "Successfully downloaded:"
+   printf "  • %s\n" "${success[@]}" >&2
+fi
 
-[ ${#fails[@]} -eq 0 ] || {
-   errortext Failed to download:
-   printf "• %s\n" "${fails[@]}" >&2
-}
+if [[ ${#fails[@]} -gt 0 ]]; then
+   errortext "Failed to download:"
+   printf "  • %s\n" "${fails[@]}" >&2
+fi
 
-[ ${#already[@]} -eq 0 ] || {
-   warn The following were already installed:
-   printf "• %s\n" "${already[@]}" >&2
-}
+if [[ ${#already[@]} -gt 0 ]]; then
+   warn "The following were already installed:"
+   printf "  • %s\n" "${already[@]}" >&2
+fi
 
 echo "Voices installed under: $dest"
