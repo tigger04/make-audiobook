@@ -17,10 +17,15 @@ Audiobook creation is typically:
 make-audiobook provides a simple, local pipeline:
 
 ```
-Document (epub, docx, txt, md, html, pdf)
-    → Plain text (pandoc)
-    → Speech audio (Piper TTS)
-    → MP3 with metadata (ffmpeg)
+Piper engine:
+  Document (epub, docx, txt, md, html, pdf, mobi)
+      → Plain text (pandoc)
+      → Speech audio (Piper TTS)
+      → MP3 with metadata (ffmpeg)
+
+Kokoro engine:
+  Document (epub, pdf, txt) → MP3 directly (Kokoro TTS, chapter-aware)
+  Document (docx, md, html, mobi) → Plain text (pandoc) → MP3 (Kokoro TTS)
 ```
 
 All processing happens locally using open-source tools. Users own their output.
@@ -45,7 +50,7 @@ make-audiobook mybook.epub
 ```
 
 ### 4. Quality
-Piper voices rival commercial TTS. Medium quality is production-ready; high quality is exceptional. Users choose their trade-off between speed and fidelity.
+Piper voices rival commercial TTS. Medium quality is production-ready; high quality is exceptional. Kokoro offers even higher fidelity with chapter-aware conversion for epub and pdf. Users choose their trade-off between speed and fidelity.
 
 ### 5. Accessibility
 The GUI removes technical barriers. Non-technical users can:

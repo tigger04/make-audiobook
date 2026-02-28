@@ -1,6 +1,6 @@
 # CLI Usage Guide
 
-The `make-audiobook` command-line interface provides powerful batch conversion capabilities for converting documents to audiobooks using Piper TTS.
+The `make-audiobook` command-line interface provides powerful batch conversion capabilities for converting documents to audiobooks using Piper or Kokoro TTS.
 
 ## Basic Usage
 
@@ -71,6 +71,26 @@ make-audiobook mybook.txt -s=1.0
 make-audiobook mybook.txt
 ```
 
+### Kokoro Engine
+
+Use the Kokoro engine for higher quality output with native epub/pdf chapter support:
+
+```bash
+# Convert with Kokoro (uses default voice af_heart)
+make-audiobook mybook.epub --engine=kokoro
+
+# Specify a Kokoro voice
+make-audiobook mybook.epub --engine=kokoro --voice=af_bella
+
+# Adjust Kokoro speed (1.0 = normal, higher = faster)
+make-audiobook mybook.epub --engine=kokoro --speed=1.2
+
+# Kokoro handles epub and pdf natively (chapter-aware)
+make-audiobook mybook.pdf --engine=kokoro --voice=bm_lewis
+```
+
+Kokoro has 26 built-in voices (no download needed). Requires `kokoro-tts` and `espeak-ng` — see [Installation Guide](installation.md#optional-kokoro-tts-engine).
+
 ### Batch Processing
 
 Process multiple files at once:
@@ -89,11 +109,12 @@ make-audiobook *.epub *.txt *.docx
 ## Supported Input Formats
 
 - `.txt` - Plain text
-- `.epub` - EPUB ebooks
+- `.epub` - EPUB ebooks (chapter-aware with Kokoro)
 - `.docx` - Microsoft Word documents
 - `.md` - Markdown
 - `.html` - HTML pages
-- `.pdf` - PDF documents
+- `.pdf` - PDF documents (chapter-aware with Kokoro)
+- `.mobi` - Mobipocket ebooks (requires Calibre)
 
 ## Voice Management
 
