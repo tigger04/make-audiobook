@@ -61,6 +61,10 @@ OPTIONS:
    --engine=ENGINE (EXPERIMENTAL: Use alternative TTS engine.
                    - Options: piper (default), whisperspeech
                    - WhisperSpeech requires: pip install whisperspeech)
+   --non-interactive (skip prompts, use defaults for missing values)
+   --author=NAME (set author name for ID3 tags)
+   --title=TITLE (set title for ID3 tags)
+   --voice=PATH (specify voice model path directly)
 EOM
    exit 1
 fi
@@ -115,6 +119,10 @@ random=false
 random_filter=.
 source_files=()
 length_scale=1.5
+non_interactive=false
+author=""
+book_title=""
+voice_model=""
 
 while [ $# -gt 0 ]; do
    case "$1" in
@@ -137,7 +145,7 @@ while [ $# -gt 0 ]; do
       list_installed_voices
       exit $?
       ;;
-   s)
+   -s* | --length_scale*)
       if [[ "$1" == *=* ]]; then
          length_scale="${1#*=}"
          if ! [[ $length_scale =~ ^[0-9]+([.][0-9]+)?$ ]]; then
@@ -151,6 +159,33 @@ while [ $# -gt 0 ]; do
          die "Length scale option requires a value, e.g. --length_scale=1.5"
       fi
       ;;
+   --non-interactive)
+      non_interactive=true
+      ;;
+   --author*)
+      if [[ "$1" == *=* ]]; then
+         author="${1#*=}"
+      else
+         die "Author option requires a value, e.g. --author=\"John Doe\""
+      fi
+      ;;
+   --title*)
+      if [[ "$1" == *=* ]]; then
+         book_title="${1#*=}"
+      else
+         die "Title option requires a value, e.g. --title=\"My Book\""
+      fi
+      ;;
+   --voice*)
+      if [[ "$1" == *=* ]]; then
+         voice_model="${1#*=}"
+         if [[ ! -f "$voice_model" ]]; then
+            die "Voice model file not found: $voice_model"
+         fi
+      else
+         die "Voice option requires a value, e.g. --voice=/path/to/voice.onnx"
+      fi
+      ;;
    *)
       source_files+=("$1")
       ;;
@@ -161,12 +196,14 @@ done
 # declare -p random random_filter source_files voices_installed cleanup_targets
 # exit
 
-info "The following metadata will be applied to all $# files specified, if entered."
-# Prompt for author and book (optional)
-echo -n "Enter author name (optional): "
-read -r author
-echo -n "Enter book title (optional): "
-read -r book_title
+if ! $non_interactive; then
+   info "The following metadata will be applied to all ${#source_files[@]} files specified, if entered."
+   # Prompt for author and book (optional)
+   echo -n "Enter author name (optional): "
+   read -r author
+   echo -n "Enter book title (optional): "
+   read -r book_title
+fi
 
 # Function to extract track number from filename
 extract_track_number() {
@@ -328,8 +365,17 @@ convert_file() {
 declare -a successes
 declare -a fails
 
-if ! $random; then
-   voice_model=$(find ~/.local/share/piper/voices -name "*.onnx" | fzf --height 40% --reverse --prompt="Select voice model: ")
+if ! $random && [ -z "$voice_model" ]; then
+   if $non_interactive; then
+      # Use the first available voice in non-interactive mode
+      voice_model=$(find ~/.local/share/piper/voices -name "*.onnx" | head -n 1)
+      if [ -z "$voice_model" ]; then
+         die "No voice models available and non-interactive mode enabled"
+      fi
+      info "Using default voice: $(basename "$voice_model")"
+   else
+      voice_model=$(find ~/.local/share/piper/voices -name "*.onnx" | fzf --height 40% --reverse --prompt="Select voice model: ")
+   fi
 fi
 
 n=0

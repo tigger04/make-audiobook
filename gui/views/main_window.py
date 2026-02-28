@@ -63,7 +63,7 @@ class MainWindow(QMainWindow):
     def _setup_ui(self) -> None:
         """Set up the main window UI."""
         self.setWindowTitle("make-audiobook")
-        self.setMinimumSize(700, 500)
+        self.setMinimumSize(900, 500)  # Increased width for 3-column layout
 
         # Central widget with tabs
         central = QWidget()
@@ -84,30 +84,36 @@ class MainWindow(QMainWindow):
         tab = QWidget()
         layout = QHBoxLayout(tab)
 
-        # Left side: file list
-        left_layout = QVBoxLayout()
+        # Column 1: File list (30% of width)
+        file_layout = QVBoxLayout()
         self._file_list = FileListWidget()
-        left_layout.addWidget(self._file_list)
+        file_layout.addWidget(self._file_list)
 
-        # Convert button
-        self._convert_button = QPushButton("Convert to Audiobook")
-        self._convert_button.setEnabled(False)
-        left_layout.addWidget(self._convert_button)
+        layout.addLayout(file_layout, 3)  # 30% of width
 
-        layout.addLayout(left_layout, 2)
-
-        # Right side: settings and progress
-        right_layout = QVBoxLayout()
+        # Column 2: Settings (40% of width)
+        settings_layout = QVBoxLayout()
 
         # Get installed voices for settings panel
         installed_voices = self._scan_installed_voices()
         self._settings_panel = SettingsPanel(installed_voices=installed_voices)
-        right_layout.addWidget(self._settings_panel)
+        settings_layout.addWidget(self._settings_panel)
 
+        layout.addLayout(settings_layout, 4)  # 40% of width
+
+        # Column 3: Progress (30% of width)
+        progress_layout = QVBoxLayout()
         self._progress_panel = ProgressPanel()
-        right_layout.addWidget(self._progress_panel)
+        progress_layout.addWidget(self._progress_panel)
 
-        layout.addLayout(right_layout, 1)
+        # Prominent Convert button at bottom of progress panel
+        self._convert_button = QPushButton("Convert to Audiobook")
+        self._convert_button.setEnabled(False)
+        self._convert_button.setMinimumHeight(40)  # Make it prominent
+        self._convert_button.setStyleSheet("font-weight: bold; font-size: 12px;")
+        progress_layout.addWidget(self._convert_button)
+
+        layout.addLayout(progress_layout, 3)  # 30% of width
 
         self._tab_widget.addTab(tab, "Convert")
 

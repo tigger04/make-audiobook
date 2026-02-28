@@ -72,8 +72,8 @@ class SettingsPanel(QWidget):
         scroll.setWidget(content)
         layout = QVBoxLayout(content)
 
-        # Set minimum width to prevent squashing
-        self.setMinimumWidth(300)
+        # Set minimum width (reduced since settings now has its own column)
+        self.setMinimumWidth(250)
 
         # Engine selection group (Phase 1 - experimental)
         engine_group = QGroupBox("TTS Engine (Experimental)")

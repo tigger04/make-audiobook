@@ -13,7 +13,7 @@ from typing import Optional
 from PySide6.QtCore import QObject, QProcess, QProcessEnvironment, Signal
 
 from gui.models.conversion_job import ConversionJob, JobStatus
-from gui.utils.paths import get_script_path, get_expanded_path
+from gui.utils.paths import get_script_path, get_expanded_path, VOICES_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +98,23 @@ class ConversionWorker(QObject):
         script_path = get_script_path()
         cmd: list[Path | str] = [script_path]
 
+        # Always use non-interactive mode in GUI
+        cmd.append("--non-interactive")
+
+        # Add author if specified
+        if self._job.author:
+            cmd.append(f"--author={self._job.author}")
+
+        # Add title if specified
+        if self._job.title:
+            cmd.append(f"--title={self._job.title}")
+
+        # Add voice if not using random
+        if not self._job.random_voice and self._job.voice_key:
+            voice_path = self._resolve_voice_path(self._job.voice_key)
+            if voice_path:
+                cmd.append(f"--voice={voice_path}")
+
         # Add random voice flag
         if self._job.random_voice:
             if self._job.random_filter:
@@ -114,6 +131,34 @@ class ConversionWorker(QObject):
             cmd.append(f)
 
         return cmd
+
+    def _resolve_voice_path(self, voice_key: str) -> Optional[str]:
+        """Resolve a voice key to its full .onnx file path.
+
+        Args:
+            voice_key: Voice identifier like "en_US-ryan-high"
+
+        Returns:
+            Full path to .onnx file, or None if not found
+        """
+        if not voice_key:
+            return None
+
+        # Extract language from voice key (first part before first dash)
+        parts = voice_key.split("-")
+        if len(parts) < 2:
+            return None
+        language = parts[0]
+
+        # Build expected path: VOICES_DIR/language/voice_key/voice_key.onnx
+        voice_path = VOICES_DIR / language / voice_key / f"{voice_key}.onnx"
+
+        if voice_path.exists():
+            return str(voice_path)
+
+        # Log warning but don't fail - let the script handle the error
+        logger.warning("Voice file not found: %s", voice_path)
+        return None
 
     def _on_stdout_ready(self) -> None:
         """Handle stdout data from process."""
