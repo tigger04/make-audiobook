@@ -2,7 +2,7 @@
 # ABOUTME: Copy this file to tigger04/homebrew-tap/Casks/ after building a release.
 
 cask "make-audiobook" do
-  version "3.0.0"
+  version "3.0.1"
   sha256 "UPDATE_WITH_ACTUAL_SHA256"
 
   url "https://github.com/tigger04/make-audiobook/releases/download/v#{version}/make-audiobook-#{version}.dmg"
