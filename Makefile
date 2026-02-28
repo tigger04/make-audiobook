@@ -94,7 +94,7 @@ release:
 	@echo "Creating release $(RELEASE_VERSION) (current: $(CURRENT_VERSION))..."
 	@echo ""
 	@echo "Stamping version $(RELEASE_VERSION) into scripts..."
-	sed -i '' 's/^VERSION=".*"/VERSION="$(RELEASE_VERSION)"/' make-audiobook piper-voices-setup
+	sed -i.bak 's/^VERSION=".*"/VERSION="$(RELEASE_VERSION)"/' make-audiobook piper-voices-setup && rm -f make-audiobook.bak piper-voices-setup.bak
 	@echo ""
 	@echo "Running tests first..."
 	$(MAKE) test
