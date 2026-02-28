@@ -7,19 +7,10 @@ source "$(dirname "$0")"/shell-and-scripting-helpers/.qfuncs.sh
 
 set -euo pipefail
 
-VERSION="3.3.0"
-
-get_version() {
-   local dir
-   dir="$(cd "$(dirname "$0")" && pwd)"
-   if git -C "$dir" describe --tags --abbrev=0 2>/dev/null; then
-      return
-   fi
-   echo "v$VERSION"
-}
+VERSION="3.4.0"
 
 if [[ "${1:-}" =~ ^--?[Vv](ersion)?$ ]]; then
-   echo "piper-voices-setup $(get_version)"
+   echo "piper-voices-setup $VERSION"
    exit 0
 fi
 
