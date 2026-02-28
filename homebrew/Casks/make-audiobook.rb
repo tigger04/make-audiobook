@@ -54,5 +54,9 @@ cask "make-audiobook" do
 
     For additional voices, use the GUI voice browser or visit:
       https://huggingface.co/rhasspy/piper-voices
+
+    For Kokoro TTS engine (optional, higher quality):
+      brew install espeak
+      pipx install kokoro-tts
   EOS
 end

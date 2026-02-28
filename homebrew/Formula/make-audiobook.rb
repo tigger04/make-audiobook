@@ -58,6 +58,10 @@ class MakeAudiobook < Formula
       For additional voices, visit:
         https://huggingface.co/rhasspy/piper-voices
 
+      For Kokoro TTS engine (optional, higher quality):
+        brew install espeak
+        pipx install kokoro-tts
+
       For the GUI version, install the cask instead:
         brew install --cask tigger04/tap/make-audiobook
     EOS
