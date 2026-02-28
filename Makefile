@@ -111,9 +111,9 @@ release:
 		./scripts/update-homebrew.sh "$(RELEASE_VERSION)"; \
 	fi
 	@echo ""
-	@echo "Committing Homebrew updates..."
-	git add homebrew/Formula/make-audiobook.rb homebrew/Casks/make-audiobook.rb
-	git commit -m "chore: update Homebrew formula and cask to $(RELEASE_VERSION)" || echo "No Homebrew changes to commit"
+	@echo "Committing release $(RELEASE_VERSION)..."
+	git add make-audiobook piper-voices-setup homebrew/Formula/make-audiobook.rb homebrew/Casks/make-audiobook.rb
+	git commit -m "chore: release $(RELEASE_VERSION)" || echo "No changes to commit"
 	@echo ""
 	@echo "Tagging v$(RELEASE_VERSION)..."
 	git tag -a "v$(RELEASE_VERSION)" -m "Release $(RELEASE_VERSION)"
