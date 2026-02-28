@@ -4,8 +4,8 @@
 class MakeAudiobook < Formula
   desc "Convert documents to audiobooks using Piper TTS (CLI)"
   homepage "https://github.com/tigger04/make-audiobook"
-  url "https://github.com/tigger04/make-audiobook/archive/refs/tags/v3.1.0.tar.gz"
-  sha256 "UPDATE_WITH_ACTUAL_SHA256"
+  url "https://github.com/tigger04/make-audiobook/archive/refs/tags/v3.2.0.tar.gz"
+  sha256 "d809cde887c21da3046a6b2072e57dfc6c696e5f194a7f7689839cbb3c2aad38"
   license "MIT"
   head "https://github.com/tigger04/make-audiobook.git", branch: "master"
 
@@ -19,11 +19,15 @@ class MakeAudiobook < Formula
 
   def install
     bin.install "make-audiobook"
-    bin.install "piper-voices-setup"
     bin.install "install-dependencies"
 
     # Install shell helper scripts
-    (libexec/"shell-and-scripting-helpers").install Dir["shell-and-scripting-helpers/*"]
+    if (buildpath/"shell-and-scripting-helpers").exist?
+      libexec.install "shell-and-scripting-helpers"
+    end
+
+    # Install piper-voices-setup to libexec first
+    libexec.install "piper-voices-setup" => "piper-voices-setup.real"
 
     # Create wrapper that sources helpers from correct location
     (bin/"piper-voices-setup").write <<~EOS
@@ -32,8 +36,8 @@ class MakeAudiobook < Formula
       exec "#{libexec}/piper-voices-setup.real" "$@"
     EOS
 
-    # Move original script
-    libexec.install bin/"piper-voices-setup" => "piper-voices-setup.real"
+    # Make the wrapper executable
+    chmod 0755, bin/"piper-voices-setup"
   end
 
   def post_install
