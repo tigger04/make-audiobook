@@ -257,6 +257,7 @@ class MainWindow(QMainWindow):
         self._progress_panel.reset()
         self._progress_panel.set_status("Converting...")
         self._progress_panel.set_running(True)
+        self._progress_panel.show_log()  # Auto-expand log panel to show progress
         self._convert_button.setEnabled(False)
 
         self._conversion_thread.start()

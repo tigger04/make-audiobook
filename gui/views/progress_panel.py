@@ -120,10 +120,16 @@ class ProgressPanel(QWidget):
 
     def set_file_progress(self, percent: int) -> None:
         """Set the file progress bar value."""
+        # Switch to determinate mode if needed
+        if self._file_progress.maximum() == 0:
+            self._file_progress.setRange(0, 100)
         self._file_progress.setValue(min(max(percent, 0), 100))
 
     def set_overall_progress(self, percent: int) -> None:
         """Set the overall progress bar value."""
+        # Switch to determinate mode if needed
+        if self._overall_progress.maximum() == 0:
+            self._overall_progress.setRange(0, 100)
         self._overall_progress.setValue(min(max(percent, 0), 100))
 
     def add_log(self, message: str) -> None:
@@ -141,7 +147,14 @@ class ProgressPanel(QWidget):
     def set_running(self, running: bool) -> None:
         """Set running state (enables/disables cancel button)."""
         self._cancel_button.setEnabled(running)
-        if not running:
+        if running:
+            # Set progress bars to indeterminate mode initially
+            self._file_progress.setRange(0, 0)  # Indeterminate
+            self._overall_progress.setRange(0, 0)  # Indeterminate
+        else:
+            # Restore normal progress bar mode
+            self._file_progress.setRange(0, 100)
+            self._overall_progress.setRange(0, 100)
             self.set_status("Complete" if self._overall_progress.value() == 100 else "Ready")
 
     def reset(self) -> None:

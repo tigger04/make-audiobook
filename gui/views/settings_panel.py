@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QSlider,
     QLineEdit,
     QGroupBox,
+    QScrollArea,
 )
 
 from gui.models.voice import Voice
@@ -52,10 +53,27 @@ class SettingsPanel(QWidget):
         self._setup_ui()
         self._setup_connections()
         self._populate_voices()
+        self._on_engine_changed()  # Set initial state based on selected engine
 
     def _setup_ui(self) -> None:
         """Set up the widget UI."""
-        layout = QVBoxLayout(self)
+        # Main layout
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Create scroll area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        main_layout.addWidget(scroll)
+
+        # Content widget
+        content = QWidget()
+        scroll.setWidget(content)
+        layout = QVBoxLayout(content)
+
+        # Set minimum width to prevent squashing
+        self.setMinimumWidth(300)
 
         # Engine selection group (Phase 1 - experimental)
         engine_group = QGroupBox("TTS Engine (Experimental)")
@@ -72,6 +90,7 @@ class SettingsPanel(QWidget):
 
         # Voice selection group
         voice_group = QGroupBox("Voice")
+        voice_group.setMinimumHeight(100)  # Ensure voice area isn't squashed
         voice_inner = QVBoxLayout(voice_group)
         voice_inner.setSpacing(8)
 
@@ -119,6 +138,7 @@ class SettingsPanel(QWidget):
 
         # Metadata group
         metadata_group = QGroupBox("Metadata (ID3 Tags)")
+        metadata_group.setMinimumHeight(100)  # Ensure metadata area is visible
         metadata_layout = QFormLayout(metadata_group)
 
         self._author_field = QLineEdit()
@@ -135,7 +155,7 @@ class SettingsPanel(QWidget):
 
     def _setup_connections(self) -> None:
         """Connect signals and slots."""
-        self._engine_selector.currentIndexChanged.connect(self._on_settings_changed)
+        self._engine_selector.currentIndexChanged.connect(self._on_engine_changed)
         self._voice_selector.currentIndexChanged.connect(self._on_settings_changed)
         self._random_checkbox.toggled.connect(self._on_random_toggled)
         self._random_filter.currentIndexChanged.connect(self._on_settings_changed)
@@ -158,15 +178,40 @@ class SettingsPanel(QWidget):
 
     def _on_random_toggled(self, checked: bool) -> None:
         """Handle random checkbox toggle."""
-        self._random_filter.setVisible(checked)
-        self._random_filter_label.setVisible(checked)
-        self._voice_selector.setEnabled(not checked)
+        is_whisperspeech = self.get_selected_engine() == "whisperspeech"
+
+        # Only show filter when random is checked and not using WhisperSpeech
+        self._random_filter.setVisible(checked and not is_whisperspeech)
+        self._random_filter_label.setVisible(checked and not is_whisperspeech)
+
+        # Voice selector is disabled when random mode OR when WhisperSpeech is selected
+        self._voice_selector.setEnabled(not checked and not is_whisperspeech)
         self._on_settings_changed()
 
     def _on_speed_changed(self, value: int) -> None:
         """Handle speed slider change."""
         speed = value / 10.0
         self._speed_display.setText(f"{speed:.1f}x")
+        self._on_settings_changed()
+
+    def _on_engine_changed(self) -> None:
+        """Handle engine selector change."""
+        is_whisperspeech = self.get_selected_engine() == "whisperspeech"
+        is_random_checked = self._random_checkbox.isChecked()
+
+        # Disable Piper voice controls when WhisperSpeech is selected
+        self._voice_selector.setEnabled(not is_whisperspeech and not is_random_checked)
+        self._random_checkbox.setEnabled(not is_whisperspeech)
+
+        # Random filter should only be visible when Piper is selected AND random is checked
+        self._random_filter.setVisible(not is_whisperspeech and is_random_checked)
+        self._random_filter_label.setVisible(not is_whisperspeech and is_random_checked)
+        self._random_filter.setEnabled(not is_whisperspeech and is_random_checked)
+        self._random_filter_label.setEnabled(not is_whisperspeech and is_random_checked)
+
+        # WhisperSpeech supports speed control, so keep speed slider enabled
+        # The length_scale concept applies to Piper, but WhisperSpeech may have its own speed control
+
         self._on_settings_changed()
 
     def get_selected_voice(self) -> Optional[str]:
