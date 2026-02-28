@@ -179,6 +179,10 @@ class MainWindow(QMainWindow):
         if self._config.get("speed"):
             self._settings_panel.set_speed(self._config["speed"])
 
+        # Restore engine selection
+        if self._config.get("engine"):
+            self._settings_panel.set_engine(self._config["engine"])
+
     def _save_config(self) -> None:
         """Save current configuration."""
         self._config["window_geometry"] = {
@@ -188,6 +192,7 @@ class MainWindow(QMainWindow):
             "height": self.height(),
         }
         self._config["speed"] = self._settings_panel.get_speed()
+        self._config["engine"] = self._settings_panel.get_selected_engine()
         self._config["last_voice"] = self._settings_panel.get_selected_voice()
 
         save_config(self._config)
@@ -235,12 +240,15 @@ class MainWindow(QMainWindow):
             return
 
         # Create conversion job
+        engine = self._settings_panel.get_selected_engine()
         job = ConversionJob(
             files=files,
             voice_key=self._settings_panel.get_selected_voice(),
             random_voice=self._settings_panel.is_random_mode(),
             random_filter=self._settings_panel.get_random_filter(),
             length_scale=self._settings_panel.get_length_scale(),
+            engine=engine,
+            speed=self._settings_panel.get_speed(),
             author=self._settings_panel.get_author(),
             title=self._settings_panel.get_title(),
         )

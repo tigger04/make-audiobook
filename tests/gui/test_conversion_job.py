@@ -122,3 +122,23 @@ class TestConversionJob:
         """Test job file count property."""
         job = ConversionJob(files=[Path("/tmp/a.txt"), Path("/tmp/b.txt")])
         assert job.file_count == 2
+
+    def test_job_default_engine_is_piper(self):
+        """Test default engine is piper."""
+        job = ConversionJob(files=[])
+        assert job.engine == "piper"
+
+    def test_job_with_kokoro_engine(self):
+        """Test ConversionJob with kokoro engine."""
+        job = ConversionJob(files=[], engine="kokoro")
+        assert job.engine == "kokoro"
+
+    def test_job_with_speed(self):
+        """Test ConversionJob stores speed for Kokoro."""
+        job = ConversionJob(files=[], engine="kokoro", speed=1.5)
+        assert job.speed == 1.5
+
+    def test_job_default_speed(self):
+        """Test default speed is 1.0."""
+        job = ConversionJob(files=[])
+        assert job.speed == 1.0

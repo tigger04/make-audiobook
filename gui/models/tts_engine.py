@@ -79,6 +79,18 @@ class TTSEngine(ABC):
         """
         pass
 
+    def supported_input_formats(self) -> frozenset[str]:
+        """Return file extensions the engine can handle natively.
+
+        Engines that can parse formats like epub or pdf directly
+        should override this to return those extensions (e.g. {".epub", ".pdf"}).
+        The default returns an empty set, meaning the engine needs pre-extracted text.
+
+        Returns:
+            Frozenset of file extensions (e.g. frozenset({".epub", ".pdf", ".txt"}))
+        """
+        return frozenset()
+
 
 class PiperEngine(TTSEngine):
     """Piper TTS engine implementation."""
@@ -308,10 +320,149 @@ class WhisperSpeechEngine(TTSEngine):
         ]
 
 
+# Kokoro built-in voice definitions: (key, display_name, gender, accent)
+_KOKORO_VOICES = (
+    ("af_alloy", "Alloy", "female", "American"),
+    ("af_aoede", "Aoede", "female", "American"),
+    ("af_bella", "Bella", "female", "American"),
+    ("af_heart", "Heart", "female", "American"),
+    ("af_jessica", "Jessica", "female", "American"),
+    ("af_kore", "Kore", "female", "American"),
+    ("af_nicole", "Nicole", "female", "American"),
+    ("af_nova", "Nova", "female", "American"),
+    ("af_river", "River", "female", "American"),
+    ("af_sarah", "Sarah", "female", "American"),
+    ("af_sky", "Sky", "female", "American"),
+    ("am_adam", "Adam", "male", "American"),
+    ("am_echo", "Echo", "male", "American"),
+    ("am_liam", "Liam", "male", "American"),
+    ("am_michael", "Michael", "male", "American"),
+    ("am_onyx", "Onyx", "male", "American"),
+    ("am_puck", "Puck", "male", "American"),
+    ("am_santa", "Santa", "male", "American"),
+    ("bf_alice", "Alice", "female", "British"),
+    ("bf_emma", "Emma", "female", "British"),
+    ("bf_isabella", "Isabella", "female", "British"),
+    ("bf_lily", "Lily", "female", "British"),
+    ("bm_daniel", "Daniel", "male", "British"),
+    ("bm_fable", "Fable", "male", "British"),
+    ("bm_george", "George", "male", "British"),
+    ("bm_lewis", "Lewis", "male", "British"),
+)
+
+
+class KokoroEngine(TTSEngine):
+    """Kokoro TTS engine implementation.
+
+    Uses the kokoro-tts CLI for high-quality neural TTS with native
+    epub/pdf parsing. Requires kokoro-tts and espeak-ng to be installed.
+    """
+
+    @property
+    def name(self) -> str:
+        """Return the engine name."""
+        return "kokoro"
+
+    def is_available(self) -> bool:
+        """Check if kokoro-tts CLI and espeak-ng are installed."""
+        return (
+            shutil.which("kokoro-tts") is not None
+            and shutil.which("espeak-ng") is not None
+        )
+
+    def supported_input_formats(self) -> frozenset[str]:
+        """Return formats Kokoro handles natively (epub, pdf, txt)."""
+        return frozenset({".epub", ".pdf", ".txt"})
+
+    def synthesize(
+        self,
+        text: str,
+        voice: Voice,
+        output_path: Path,
+        **kwargs,
+    ) -> None:
+        """Synthesize text using Kokoro.
+
+        Args:
+            text: The text to synthesize
+            voice: The Kokoro voice to use
+            output_path: Where to save the audio file
+            **kwargs: Optional parameters like speed
+
+        Raises:
+            EngineNotAvailableError: If kokoro-tts is not installed
+            RuntimeError: If synthesis fails
+        """
+        if not self.is_available():
+            raise EngineNotAvailableError("kokoro-tts is not installed")
+
+        kokoro_path = shutil.which("kokoro-tts")
+        if not kokoro_path:
+            raise EngineNotAvailableError("kokoro-tts executable not found")
+
+        # Write text to a temp file for kokoro-tts to read
+        import tempfile
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False
+        ) as tmp:
+            tmp.write(text)
+            tmp_path = Path(tmp.name)
+
+        try:
+            cmd = [
+                kokoro_path,
+                str(tmp_path),
+                str(output_path),
+                "--voice",
+                voice.key,
+                "--format",
+                "mp3",
+            ]
+
+            if "speed" in kwargs:
+                cmd.extend(["--speed", str(kwargs["speed"])])
+
+            logger.info("Running Kokoro synthesis: %s", " ".join(cmd))
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            logger.debug("Kokoro output: %s", result.stdout)
+
+        except subprocess.CalledProcessError as e:
+            logger.error("Kokoro synthesis failed: %s", e.stderr)
+            raise RuntimeError(f"Kokoro synthesis failed: {e.stderr}") from e
+        finally:
+            if tmp_path.exists():
+                tmp_path.unlink()
+
+    def get_voices(self) -> list[Voice]:
+        """Return list of built-in Kokoro voices."""
+        voices = []
+        for key, display_name, gender, accent in _KOKORO_VOICES:
+            voices.append(
+                Voice(
+                    key=key,
+                    name=f"{display_name} ({accent})",
+                    language="en",
+                    quality=gender,
+                    engine="kokoro",
+                    files={},
+                    size_bytes=0,
+                    installed=True,
+                )
+            )
+        return voices
+
+
 # Engine registry
 _engines = {
     "piper": PiperEngine,
     "whisperspeech": WhisperSpeechEngine,
+    "kokoro": KokoroEngine,
 }
 
 

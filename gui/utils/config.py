@@ -20,6 +20,7 @@ def get_default_config() -> dict[str, Any]:
     return {
         "last_voice": None,
         "speed": 1.0,
+        "engine": "piper",
         "random_voice": False,
         "random_filter": None,
         "window_geometry": None,

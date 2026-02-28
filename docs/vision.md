@@ -33,6 +33,7 @@ All processing runs on your machine. No internet required after initial voice do
 ### 2. Open Source
 Built entirely on FOSS:
 - Piper TTS (MIT) - neural text-to-speech
+- Kokoro TTS (Apache-2.0) - high-quality neural TTS (optional)
 - Pandoc (GPL) - universal document converter
 - FFmpeg (LGPL) - audio encoding
 - PySide6 (LGPL) - GUI framework
@@ -81,6 +82,7 @@ The GUI removes technical barriers. Non-technical users can:
 - [x] macOS Homebrew cask and formula (#15)
 - [x] Nix flake (#10)
 - [x] TTS engine abstraction - WhisperSpeech support (#21) - Phase 1
+- [x] Kokoro TTS engine integration (#24) — high-quality TTS with chapter-aware epub/pdf
 - [ ] Cross-platform installers - Linux/Windows (#2)
 
 ### Future Considerations

@@ -1,6 +1,6 @@
 # make-audiobook
 
-Convert ebooks and documents into audiobooks using Piper TTS — locally, privately, and free.
+Convert ebooks and documents into audiobooks using Piper or Kokoro TTS — locally, privately, and free.
 
 **[Installation](./docs/installation.md)** | **[CLI Guide](./docs/cli-usage.md)** | **[GUI Guide](./docs/gui-usage.md)** | **[Vision](./docs/vision.md)**
 
@@ -12,7 +12,9 @@ Input files must be **DRM-free**. This tool cannot process DRM-protected ebooks 
 
 - **Local processing** — no cloud services, no data leaves your machine
 - **GUI and CLI** interfaces
-- Converts epub, docx, txt, md, html, pdf to MP3
+- **Multiple TTS engines**: Piper (fast, 100+ voices) and Kokoro (high quality, 26 voices)
+- Converts epub, docx, txt, md, html, pdf, mobi to MP3
+- **Chapter-aware** conversion with Kokoro for epub/pdf
 - **Batch processing** multiple files
 - **ID3 metadata** tagging (author, title, track numbers)
 - **Voice browser** to download from 100+ Piper voices
@@ -67,6 +69,12 @@ make-audiobook chapter*.txt --random=high
 
 # Adjust speed (higher = slower, default 1.5)
 make-audiobook mybook.epub --length_scale=2.0
+
+# Use Kokoro engine (higher quality, chapter-aware)
+make-audiobook mybook.epub --engine=kokoro
+
+# Kokoro with specific voice and speed
+make-audiobook mybook.epub --engine=kokoro --voice=af_heart --speed=1.5
 ```
 
 [Full CLI Guide](./docs/cli-usage.md)
@@ -81,10 +89,13 @@ make-audiobook mybook.epub --length_scale=2.0
 | .md    |        |
 | .html  |        |
 | .pdf   |        |
+| .mobi  |        |
 
 ## Dependencies
 
-- [Piper TTS](https://github.com/rhasspy/piper) — neural text-to-speech
+- [Piper TTS](https://github.com/rhasspy/piper) — neural text-to-speech (default engine)
+- [Kokoro TTS](https://github.com/nazdridoy/kokoro-tts) — high-quality TTS with native epub/pdf support (optional)
+- [espeak-ng](https://github.com/espeak-ng/espeak-ng) — required by Kokoro (optional)
 - [FFmpeg](https://ffmpeg.org/) — audio encoding
 - [Pandoc](https://pandoc.org/) — document conversion
 - [PySide6](https://doc.qt.io/qtforpython-6/) — GUI framework (LGPL)
@@ -113,7 +124,7 @@ make-audiobook mybook.epub --length_scale=2.0
 | `make-audiobook-gui` | GUI launcher script |
 | `piper-voices-setup` | Voice installation script |
 | `gui/` | PySide6 GUI source code |
-| `tests/gui/` | GUI test suite (264 tests) |
+| `tests/gui/` | GUI test suite |
 | `docs/` | Documentation |
 | `homebrew/` | Homebrew formula and cask |
 | `flake.nix` | Nix flake for NixOS/nix-darwin |

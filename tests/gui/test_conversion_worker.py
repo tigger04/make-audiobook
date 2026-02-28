@@ -242,3 +242,184 @@ class TestConversionWorker:
 
         # Crashed emits finished from Qt, so we should not double-emit
         assert len(finished_results) == 0
+
+    def test_worker_file_progress_reaches_100_on_success(self, qapp, sample_job):
+        """Test file progress reaches 100% when process succeeds."""
+        worker = ConversionWorker(job=sample_job)
+        worker._current_file = sample_job.files[0]
+
+        progress_updates = []
+        worker.progress.connect(lambda f, p: progress_updates.append((f, p)))
+
+        worker._on_process_finished(0)
+
+        # File progress should reach 100 on success
+        assert any(p == 100 for _, p in progress_updates)
+
+    def test_worker_overall_progress_correct_for_last_file(self, qapp, tmp_path):
+        """Test overall progress is correct when processing last file."""
+        files = []
+        for i in range(4):
+            f = tmp_path / f"ch{i}.txt"
+            f.write_text(f"Chapter {i}")
+            files.append(f)
+
+        job = ConversionJob(files=files, voice_key="en_US-ryan-high")
+        worker = ConversionWorker(job=job)
+
+        progress_updates = []
+        worker.progress.connect(lambda f, p: progress_updates.append((f, p)))
+
+        # Simulate "Processing file 4 of 4"
+        worker._parse_progress_output("Processing file 4 of 4")
+
+        # For file 4 of 4, overall should be 75% ((4-1)/4 * 100)
+        # The key is it should not be stuck at a wrong value
+        assert len(progress_updates) >= 1
+        last_update = progress_updates[-1]
+        assert last_update[1] == 75
+
+    def test_worker_parses_file_progress_from_processing_message(self, qapp, tmp_path):
+        """Test that Processing message resets file tracking."""
+        files = [tmp_path / "a.txt", tmp_path / "b.txt"]
+        for f in files:
+            f.write_text("test")
+
+        job = ConversionJob(files=files, voice_key="en_US-ryan-high")
+        worker = ConversionWorker(job=job)
+
+        # Simulate transitioning files
+        worker._parse_progress_output("Processing file 1 of 2")
+        assert worker._current_file == files[0]
+        assert worker._current_file_progress == 0
+
+        # Simulate some pv progress on first file
+        worker._parse_progress_output("1.5MiB 0:00:05 [300KiB/s]")
+        assert worker._current_file_progress > 0
+
+        # Transition to second file
+        worker._parse_progress_output("Processing file 2 of 2")
+        assert worker._current_file == files[1]
+        assert worker._current_file_progress == 0
+
+
+class TestKokoroConversionWorker:
+    """Tests for Kokoro engine-specific conversion worker behaviour."""
+
+    @pytest.fixture
+    def kokoro_job(self, tmp_path):
+        """Sample Kokoro conversion job."""
+        test_file = tmp_path / "book.epub"
+        test_file.write_text("epub content")
+        return ConversionJob(
+            files=[test_file],
+            voice_key="af_heart",
+            engine="kokoro",
+            speed=1.5,
+        )
+
+    def test_kokoro_build_command_has_engine_flag(self, qapp, kokoro_job):
+        """Kokoro jobs should include --engine=kokoro in command."""
+        worker = ConversionWorker(job=kokoro_job)
+        cmd = worker._build_command()
+        cmd_str = " ".join(str(c) for c in cmd)
+        assert "--engine=kokoro" in cmd_str
+
+    def test_kokoro_build_command_has_voice(self, qapp, kokoro_job):
+        """Kokoro jobs should pass voice name directly (not a path)."""
+        worker = ConversionWorker(job=kokoro_job)
+        cmd = worker._build_command()
+        cmd_str = " ".join(str(c) for c in cmd)
+        assert "--voice=af_heart" in cmd_str
+
+    def test_kokoro_build_command_has_speed(self, qapp, kokoro_job):
+        """Kokoro jobs should use --speed instead of --length_scale."""
+        worker = ConversionWorker(job=kokoro_job)
+        cmd = worker._build_command()
+        cmd_str = " ".join(str(c) for c in cmd)
+        assert "--speed=1.5" in cmd_str
+        assert "--length_scale" not in cmd_str
+
+    def test_kokoro_progress_parsing_chunk(self, qapp, kokoro_job):
+        """Kokoro chunk progress (N/M) should be parsed correctly."""
+        worker = ConversionWorker(job=kokoro_job)
+        worker._current_file = kokoro_job.files[0]
+
+        progress_updates = []
+        worker.progress.connect(lambda f, p: progress_updates.append((f, p)))
+
+        worker._parse_progress_output("[■■■■■□□□□□] (50/100) ⠋")
+
+        assert len(progress_updates) >= 1
+        _, percent = progress_updates[-1]
+        assert percent == 50
+
+    def test_kokoro_progress_parsing_chapter_marker(self, qapp, kokoro_job):
+        """Kokoro 'Processing:' marker should be tracked."""
+        worker = ConversionWorker(job=kokoro_job)
+        worker._current_file = kokoro_job.files[0]
+
+        log_messages = []
+        worker.log.connect(lambda msg: log_messages.append(msg))
+
+        worker._handle_stdout("Processing: Chapter 1 - The Beginning")
+
+        assert any("Chapter 1" in msg for msg in log_messages)
+
+    def test_kokoro_progress_parsing_total_chapters(self, qapp, kokoro_job):
+        """Kokoro 'Total Chapters:' should be stored for overall progress."""
+        worker = ConversionWorker(job=kokoro_job)
+        worker._current_file = kokoro_job.files[0]
+
+        worker._parse_progress_output("Total Chapters: 12")
+
+        assert worker._kokoro_total_chapters == 12
+
+    def test_kokoro_progress_parsing_completed_chapter(self, qapp, kokoro_job):
+        """Kokoro 'Completed' marker should increment chapter count."""
+        worker = ConversionWorker(job=kokoro_job)
+        worker._current_file = kokoro_job.files[0]
+        worker._kokoro_total_chapters = 4
+
+        progress_updates = []
+        worker.progress.connect(lambda f, p: progress_updates.append((f, p)))
+
+        worker._parse_progress_output("Completed Chapter 1: 50/50 chunks processed")
+
+        assert worker._kokoro_completed_chapters == 1
+
+    def test_kokoro_handles_carriage_return_in_stdout(self, qapp, kokoro_job):
+        """QProcess output with \\r should be handled correctly."""
+        worker = ConversionWorker(job=kokoro_job)
+        worker._current_file = kokoro_job.files[0]
+
+        progress_updates = []
+        worker.progress.connect(lambda f, p: progress_updates.append((f, p)))
+
+        # Simulate raw QProcess output with \r overwriting
+        raw_data = "[■□□□□□□□□□] (10/100) ⠋\r[■■□□□□□□□□] (20/100) ⠙"
+        # The stdout handler splits on \n, so this comes as one "line"
+        # but the _handle_stdout should handle \r segments
+        worker._handle_stdout(raw_data)
+
+        # Should have parsed the latest segment (20/100)
+        assert any(p == 20 for _, p in progress_updates)
+
+    def test_piper_build_command_unchanged(self, qapp, tmp_path):
+        """Piper jobs should still use the existing command format."""
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("test")
+        job = ConversionJob(
+            files=[test_file],
+            voice_key="en_US-ryan-high",
+            engine="piper",
+            length_scale=1.5,
+        )
+        worker = ConversionWorker(job=job)
+        cmd = worker._build_command()
+        cmd_str = " ".join(str(c) for c in cmd)
+
+        # Piper should NOT have --engine flag (backwards compat)
+        assert "--engine=" not in cmd_str
+        # Should have length_scale
+        assert "--length_scale=1.5" in cmd_str

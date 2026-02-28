@@ -42,7 +42,7 @@ class TestWhisperSpeechGUIBehavior:
         assert settings_panel._random_checkbox.isEnabled()
 
         # Switch to WhisperSpeech
-        settings_panel._engine_selector.setCurrentIndex(1)  # WhisperSpeech is index 1
+        settings_panel._engine_selector.setCurrentIndex(2)  # WhisperSpeech is index 2
         QCoreApplication.processEvents()
 
         # Voice controls should now be disabled

@@ -14,6 +14,7 @@ from gui.models.tts_engine import (
     TTSEngine,
     PiperEngine,
     WhisperSpeechEngine,
+    KokoroEngine,
     EngineNotAvailableError,
 )
 from gui.models.voice import Voice
@@ -311,6 +312,121 @@ class TestWhisperSpeechEngine:
         assert voices[0].language == "en"
 
 
+class TestTTSEngineSupportedFormats:
+    """Test the supported_input_formats default behaviour."""
+
+    def test_piper_engine_supported_formats_empty(self):
+        """PiperEngine should return empty set for supported formats."""
+        engine = PiperEngine()
+        assert engine.supported_input_formats() == frozenset()
+
+    def test_whisperspeech_engine_supported_formats_empty(self):
+        """WhisperSpeechEngine should return empty set for supported formats."""
+        engine = WhisperSpeechEngine()
+        assert engine.supported_input_formats() == frozenset()
+
+
+class TestKokoroEngine:
+    """Test the KokoroEngine implementation."""
+
+    @pytest.fixture
+    def kokoro_engine(self):
+        """Create a KokoroEngine instance."""
+        return KokoroEngine()
+
+    @pytest.fixture
+    def sample_voice(self):
+        """Create a sample Kokoro voice."""
+        return Voice(
+            key="af_heart",
+            name="Heart",
+            language="en",
+            quality="high",
+            engine="kokoro",
+            files={},
+            size_bytes=0,
+            installed=True,
+        )
+
+    def test_kokoro_engine_name(self, kokoro_engine):
+        """KokoroEngine should have correct name."""
+        assert kokoro_engine.name == "kokoro"
+
+    @patch("gui.models.tts_engine.shutil.which")
+    def test_kokoro_engine_is_available_when_installed(self, mock_which, kokoro_engine):
+        """KokoroEngine should be available when kokoro-tts and espeak-ng are installed."""
+        mock_which.side_effect = lambda cmd: {
+            "kokoro-tts": "/usr/local/bin/kokoro-tts",
+            "espeak-ng": "/usr/local/bin/espeak-ng",
+        }.get(cmd)
+        assert kokoro_engine.is_available() is True
+
+    @patch("gui.models.tts_engine.shutil.which")
+    def test_kokoro_engine_not_available_without_kokoro_tts(self, mock_which, kokoro_engine):
+        """KokoroEngine should not be available without kokoro-tts CLI."""
+        mock_which.side_effect = lambda cmd: {
+            "kokoro-tts": None,
+            "espeak-ng": "/usr/local/bin/espeak-ng",
+        }.get(cmd)
+        assert kokoro_engine.is_available() is False
+
+    @patch("gui.models.tts_engine.shutil.which")
+    def test_kokoro_engine_not_available_without_espeak(self, mock_which, kokoro_engine):
+        """KokoroEngine should not be available without espeak-ng."""
+        mock_which.side_effect = lambda cmd: {
+            "kokoro-tts": "/usr/local/bin/kokoro-tts",
+            "espeak-ng": None,
+        }.get(cmd)
+        assert kokoro_engine.is_available() is False
+
+    def test_kokoro_engine_supported_formats(self, kokoro_engine):
+        """KokoroEngine should support epub, pdf, and txt natively."""
+        formats = kokoro_engine.supported_input_formats()
+        assert ".epub" in formats
+        assert ".pdf" in formats
+        assert ".txt" in formats
+
+    def test_kokoro_engine_get_voices(self, kokoro_engine):
+        """KokoroEngine should return built-in Kokoro voices."""
+        voices = kokoro_engine.get_voices()
+        assert len(voices) == 26
+        assert all(isinstance(v, Voice) for v in voices)
+        assert all(v.engine == "kokoro" for v in voices)
+        # Check the recommended default voice exists
+        voice_keys = [v.key for v in voices]
+        assert "af_heart" in voice_keys
+
+    def test_kokoro_engine_voices_have_correct_metadata(self, kokoro_engine):
+        """KokoroEngine voices should have proper accent and type metadata."""
+        voices = kokoro_engine.get_voices()
+        # All should have language "en"
+        assert all(v.language == "en" for v in voices)
+        # Check sorting by key
+        keys = [v.key for v in voices]
+        assert keys == sorted(keys)
+
+    @patch("gui.models.tts_engine.shutil.which")
+    def test_kokoro_engine_synthesize_fails_when_not_available(
+        self, mock_which, kokoro_engine, sample_voice
+    ):
+        """KokoroEngine should raise error when not available."""
+        mock_which.return_value = None
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "output.mp3"
+            with pytest.raises(
+                EngineNotAvailableError, match="kokoro-tts is not installed"
+            ):
+                kokoro_engine.synthesize("Hello", sample_voice, output_path)
+
+    def test_kokoro_engine_voices_have_gender_info(self, kokoro_engine):
+        """KokoroEngine voices should encode gender in the quality field."""
+        voices = kokoro_engine.get_voices()
+        for v in voices:
+            # Quality field used for gender/type info
+            assert v.quality in ("female", "male")
+
+
 class TestEngineRegistry:
     """Test the engine registry functionality."""
 
@@ -326,6 +442,10 @@ class TestEngineRegistry:
         assert isinstance(whisper, WhisperSpeechEngine)
         assert whisper.name == "whisperspeech"
 
+        kokoro = get_engine("kokoro")
+        assert isinstance(kokoro, KokoroEngine)
+        assert kokoro.name == "kokoro"
+
     def test_get_engine_invalid_name_raises_error(self):
         """Should raise error for invalid engine name."""
         from gui.models.tts_engine import get_engine
@@ -339,22 +459,29 @@ class TestEngineRegistry:
 
         with patch("gui.models.tts_engine.shutil.which") as mock_which:
             with patch("gui.models.tts_engine.importlib.util.find_spec") as mock_spec:
-                # Both engines available
+                # All engines available (shutil.which returns path for all)
                 mock_which.return_value = "/usr/local/bin/piper"
                 mock_spec.return_value = MagicMock()
 
                 engines = get_available_engines()
-                assert len(engines) == 2
+                assert len(engines) == 3
                 assert any(e.name == "piper" for e in engines)
                 assert any(e.name == "whisperspeech" for e in engines)
+                assert any(e.name == "kokoro" for e in engines)
 
-                # Only Piper available
+                # Only Piper available (which returns path only for "piper")
+                def piper_only(cmd):
+                    if cmd == "piper":
+                        return "/usr/local/bin/piper"
+                    return None
+
+                mock_which.side_effect = piper_only
                 mock_spec.return_value = None
                 engines = get_available_engines()
                 assert len(engines) == 1
                 assert engines[0].name == "piper"
 
                 # Neither available
-                mock_which.return_value = None
+                mock_which.side_effect = lambda cmd: None
                 engines = get_available_engines()
                 assert len(engines) == 0

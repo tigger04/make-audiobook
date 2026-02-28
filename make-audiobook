@@ -58,9 +58,13 @@ OPTIONS:
    -s / --length_scale=<SCALE> (set length scale or speed of TTS.
                                - higher values = slower speech. Defaults to 1.5
                                  as I find 1.0 a bit fast for audiobooks.)
-   --engine=ENGINE (EXPERIMENTAL: Use alternative TTS engine.
-                   - Options: piper (default), whisperspeech
-                   - WhisperSpeech requires: pip install whisperspeech)
+   --engine=ENGINE (Use alternative TTS engine.
+                   - Options: piper (default), kokoro, whisperspeech
+                   - Kokoro requires: pip install kokoro-tts, espeak-ng
+                   - WhisperSpeech requires: pip install whisperspeech
+                   - Kokoro natively handles .epub and .pdf with chapter detection.)
+   --speed=SPEED (set speed multiplier for Kokoro engine.
+                 - 1.0 = normal, 1.5 = faster. No effect on Piper.)
    --non-interactive (skip prompts, use defaults for missing values)
    --author=NAME (set author name for ID3 tags)
    --title=TITLE (set title for ID3 tags)
@@ -123,6 +127,8 @@ non_interactive=false
 author=""
 book_title=""
 voice_model=""
+engine="piper"
+speed="1.0"
 
 while [ $# -gt 0 ]; do
    case "$1" in
@@ -179,11 +185,34 @@ while [ $# -gt 0 ]; do
    --voice*)
       if [[ "$1" == *=* ]]; then
          voice_model="${1#*=}"
-         if [[ ! -f "$voice_model" ]]; then
-            die "Voice model file not found: $voice_model"
-         fi
       else
          die "Voice option requires a value, e.g. --voice=/path/to/voice.onnx"
+      fi
+      ;;
+   --engine*)
+      if [[ "$1" == *=* ]]; then
+         engine="${1#*=}"
+         case "$engine" in
+            piper|kokoro|whisperspeech)
+               info "Using engine: $engine"
+               ;;
+            *)
+               die "Unknown engine: $engine. Options: piper, kokoro, whisperspeech"
+               ;;
+         esac
+      else
+         die "Engine option requires a value, e.g. --engine=kokoro"
+      fi
+      ;;
+   --speed*)
+      if [[ "$1" == *=* ]]; then
+         speed="${1#*=}"
+         if ! [[ $speed =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+            die "Speed must be a positive number (integer or decimal)"
+         fi
+         info "Using speed: $speed"
+      else
+         die "Speed option requires a value, e.g. --speed=1.5"
       fi
       ;;
    *)
@@ -195,6 +224,21 @@ done
 
 # declare -p random random_filter source_files voices_installed cleanup_targets
 # exit
+
+# Validate voice model path for Piper (file must exist)
+if [[ -n "$voice_model" ]] && [[ "$engine" != "kokoro" ]] && [[ ! -f "$voice_model" ]]; then
+   die "Voice model file not found: $voice_model"
+fi
+
+# Kokoro engine: validate dependencies
+if [[ "$engine" == "kokoro" ]]; then
+   if ! command -v kokoro-tts &>/dev/null; then
+      die "kokoro-tts not found. Install: pip install kokoro-tts"
+   fi
+   if ! command -v espeak-ng &>/dev/null; then
+      die "espeak-ng not found. Install: brew install espeak"
+   fi
+fi
 
 if ! $non_interactive; then
    info "The following metadata will be applied to all ${#source_files[@]} files specified, if entered."
@@ -237,7 +281,91 @@ strip_extension() {
    esac
 }
 
-# Function to convert a single file
+# Function to convert a single file using Kokoro engine
+convert_file_kokoro() {
+   local input_file="$1"
+
+   # Kokoro voice defaults to af_heart
+   local kokoro_voice="${voice_model:-af_heart}"
+
+   # Generate output filename based on input
+   local target_mp3 base_name
+   base_name="$(strip_extension "$input_file")"
+   target_mp3="$(dirname "${input_file}")/${base_name}.mp3"
+
+   hline "$(basename "$input_file") -> $target_mp3 (Kokoro)"
+
+   mv_bak_if "$target_mp3"
+
+   local tmpdir kokoro_input
+   read -r tmpdir < <(mktemp -d)
+   register_for_cleanup "$tmpdir"
+
+   kokoro_input="$input_file"
+
+   # Pre-convert .mobi to epub for Kokoro
+   case "${input_file,,}" in
+      *.mobi)
+         if ! command -v ebook-convert &>/dev/null; then
+            die "ebook-convert not found. Install Calibre: brew install calibre"
+         fi
+         local epub_tmp="$tmpdir/converted.epub"
+         info "Converting .mobi to .epub via ebook-convert"
+         ebook-convert "$input_file" "$epub_tmp" --no-default-epub-cover
+         kokoro_input="$epub_tmp"
+         ;;
+      *.docx|*.md|*.html)
+         # Formats Kokoro does not handle natively — extract text first
+         local txt_tmp="$tmpdir/extracted.txt"
+         info "Extracting text from $(basename "$input_file") via pandoc"
+         pandoc "$input_file" --to plain --wrap=none -o "$txt_tmp"
+         kokoro_input="$txt_tmp"
+         ;;
+   esac
+
+   local cmd_args=(
+      kokoro-tts
+      "$kokoro_input"
+      "$target_mp3"
+      --voice "$kokoro_voice"
+      --speed "$speed"
+      --format mp3
+   )
+
+   info "Running: ${cmd_args[*]}"
+   "${cmd_args[@]}"
+
+   # Set ID3 tags if author or book title provided
+   if [ -n "$author" ] || [ -n "$book_title" ]; then
+      info "Setting ID3 tags for $target_mp3"
+      local tag_args=()
+
+      if [ -n "$author" ]; then
+         tag_args+=(-metadata "artist=$author")
+         tag_args+=(-metadata "album_artist=$author")
+      fi
+      if [ -n "$book_title" ]; then
+         tag_args+=(-metadata "album=$book_title")
+      fi
+
+      local track_num
+      track_num=$(extract_track_number "$input_file")
+      if [ -n "$track_num" ]; then
+         tag_args+=(-metadata "track=$track_num")
+         info "Detected track number: $track_num"
+      fi
+
+      local temp_tagged
+      temp_tagged="$(mktemp).mp3"
+      register_for_cleanup "$temp_tagged"
+      show_cmd_execute ffmpeg -i "$target_mp3" "${tag_args[@]}" -c copy "$temp_tagged" | oneline 2>&1
+      mv "$temp_tagged" "$target_mp3"
+   fi
+
+   checktext "$target_mp3"
+}
+
+# Function to convert a single file using Piper engine
 convert_file() {
    local input_text_file="$1"
 
@@ -365,16 +493,19 @@ convert_file() {
 declare -a successes
 declare -a fails
 
-if ! $random && [ -z "$voice_model" ]; then
-   if $non_interactive; then
-      # Use the first available voice in non-interactive mode
-      voice_model=$(find ~/.local/share/piper/voices -name "*.onnx" | head -n 1)
-      if [ -z "$voice_model" ]; then
-         die "No voice models available and non-interactive mode enabled"
+# Voice selection for Piper engine (Kokoro uses voice name, not path)
+if [[ "$engine" == "piper" ]]; then
+   if ! $random && [ -z "$voice_model" ]; then
+      if $non_interactive; then
+         # Use the first available voice in non-interactive mode
+         voice_model=$(find ~/.local/share/piper/voices -name "*.onnx" | head -n 1)
+         if [ -z "$voice_model" ]; then
+            die "No voice models available and non-interactive mode enabled"
+         fi
+         info "Using default voice: $(basename "$voice_model")"
+      else
+         voice_model=$(find ~/.local/share/piper/voices -name "*.onnx" | fzf --height 40% --reverse --prompt="Select voice model: ")
       fi
-      info "Using default voice: $(basename "$voice_model")"
-   else
-      voice_model=$(find ~/.local/share/piper/voices -name "*.onnx" | fzf --height 40% --reverse --prompt="Select voice model: ")
    fi
 fi
 
@@ -388,11 +519,22 @@ for source_file in "${source_files[@]}"; do
    fi
 
    info "Processing file $n of ${#source_files[@]}: $source_file"
-   if convert_file "$source_file"; then
-      successes+=("$source_file")
-   else
-      fails+=("$source_file")
-   fi
+   case "$engine" in
+      kokoro)
+         if convert_file_kokoro "$source_file"; then
+            successes+=("$source_file")
+         else
+            fails+=("$source_file")
+         fi
+         ;;
+      *)
+         if convert_file "$source_file"; then
+            successes+=("$source_file")
+         else
+            fails+=("$source_file")
+         fi
+         ;;
+   esac
 done
 
 [ ${#successes} -eq 0 ] || info Successfully processed:

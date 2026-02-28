@@ -25,6 +25,8 @@ make-audiobook chapter*.md
 | `-l`, `--list-voices` | List all installed voices |
 | `-u`, `--update-voices` | Update installed Piper voices |
 | `-s=SCALE`, `--length_scale=SCALE` | Set speech speed (higher = slower). Default: 1.5 |
+| `--engine=ENGINE` | TTS engine: piper (default), kokoro, whisperspeech |
+| `--speed=SPEED` | Speed multiplier for Kokoro (1.0 = normal, 1.5 = faster) |
 
 ## Examples
 

@@ -7,11 +7,12 @@ cask "make-audiobook" do
 
   url "https://github.com/tigger04/make-audiobook/releases/download/v#{version}/make-audiobook-#{version}.dmg"
   name "make-audiobook"
-  desc "Convert documents to audiobooks using Piper TTS"
+  desc "Convert documents to audiobooks using Piper or Kokoro TTS"
   homepage "https://github.com/tigger04/make-audiobook"
 
   # System dependencies installed via Homebrew
   depends_on formula: "calibre"  # for .mobi file support
+  depends_on formula: "espeak"   # for Kokoro TTS engine (optional)
   depends_on formula: "ffmpeg"
   depends_on formula: "pandoc"
   depends_on formula: "fzf"

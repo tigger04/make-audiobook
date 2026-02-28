@@ -27,10 +27,12 @@ class ConversionJob:
 
     Attributes:
         files: List of input file paths to convert
-        voice_key: Voice identifier (e.g., "en_US-ryan-high"), or None for selection
+        voice_key: Voice identifier (e.g., "en_US-ryan-high" or "af_heart"), or None
         random_voice: Use random voice selection
         random_filter: Quality filter when using random voice (e.g., "medium")
         length_scale: Piper length_scale (1.0 = normal, lower = faster)
+        engine: TTS engine name ("piper", "kokoro", or "whisperspeech")
+        speed: User-facing speed multiplier (1.0 = normal, 1.5 = faster)
         author: ID3 author tag value
         title: ID3 album/book title tag value
         status: Current job status
@@ -46,6 +48,8 @@ class ConversionJob:
     random_voice: bool = False
     random_filter: Optional[str] = None
     length_scale: float = 1.0
+    engine: str = "piper"
+    speed: float = 1.0
     author: Optional[str] = None
     title: Optional[str] = None
     status: JobStatus = JobStatus.PENDING

@@ -52,6 +52,9 @@ class ConversionWorker(QObject):
         self._process: Optional[QProcess] = None
         self._current_file: Optional[Path] = None
         self._current_file_progress = 0
+        # Kokoro-specific progress tracking
+        self._kokoro_total_chapters = 0
+        self._kokoro_completed_chapters = 0
 
     def start(self) -> None:
         """Start the conversion process.
@@ -92,6 +95,11 @@ class ConversionWorker(QObject):
     def _build_command(self) -> list[Path | str]:
         """Build the command line for make-audiobook.
 
+        Builds engine-specific command arguments:
+        - Piper: --voice=path/to.onnx --length_scale=X (existing behaviour)
+        - Kokoro: --engine=kokoro --voice=af_heart --speed=X
+        - WhisperSpeech: --engine=whisperspeech
+
         Returns:
             List of command and arguments
         """
@@ -101,6 +109,12 @@ class ConversionWorker(QObject):
         # Always use non-interactive mode in GUI
         cmd.append("--non-interactive")
 
+        engine = self._job.engine
+
+        # Add engine flag for non-default engines
+        if engine != "piper":
+            cmd.append(f"--engine={engine}")
+
         # Add author if specified
         if self._job.author:
             cmd.append(f"--author={self._job.author}")
@@ -109,22 +123,30 @@ class ConversionWorker(QObject):
         if self._job.title:
             cmd.append(f"--title={self._job.title}")
 
-        # Add voice if not using random
-        if not self._job.random_voice and self._job.voice_key:
-            voice_path = self._resolve_voice_path(self._job.voice_key)
-            if voice_path:
-                cmd.append(f"--voice={voice_path}")
+        if engine == "kokoro":
+            # Kokoro: pass voice name directly (not a file path)
+            if self._job.voice_key:
+                cmd.append(f"--voice={self._job.voice_key}")
+            # Kokoro uses --speed directly (no inversion)
+            if self._job.speed != 1.0:
+                cmd.append(f"--speed={self._job.speed}")
+        else:
+            # Piper/WhisperSpeech: existing voice path resolution
+            if not self._job.random_voice and self._job.voice_key:
+                voice_path = self._resolve_voice_path(self._job.voice_key)
+                if voice_path:
+                    cmd.append(f"--voice={voice_path}")
 
-        # Add random voice flag
-        if self._job.random_voice:
-            if self._job.random_filter:
-                cmd.append(f"--random={self._job.random_filter}")
-            else:
-                cmd.append("--random")
+            # Add random voice flag (Piper only)
+            if self._job.random_voice:
+                if self._job.random_filter:
+                    cmd.append(f"--random={self._job.random_filter}")
+                else:
+                    cmd.append("--random")
 
-        # Add length scale
-        if self._job.length_scale != 1.0:
-            cmd.append(f"--length_scale={self._job.length_scale}")
+            # Add length scale (Piper)
+            if self._job.length_scale != 1.0:
+                cmd.append(f"--length_scale={self._job.length_scale}")
 
         # Add files
         for f in self._job.files:
@@ -181,9 +203,22 @@ class ConversionWorker(QObject):
                 self._handle_stderr(line)
 
     def _handle_stdout(self, line: str) -> None:
-        """Process a line of stdout output."""
-        self.log.emit(line)
-        self._parse_progress_output(line)
+        """Process a line of stdout output.
+
+        Handles carriage returns (\\r) used by Kokoro for progress overwriting.
+        Takes the last \\r segment as the current state of the line.
+        """
+        # Handle \r-separated segments (Kokoro overwrites progress lines)
+        if "\r" in line:
+            segments = line.split("\r")
+            for segment in segments:
+                stripped = segment.strip()
+                if stripped:
+                    self.log.emit(stripped)
+                    self._parse_progress_output(stripped)
+        else:
+            self.log.emit(line)
+            self._parse_progress_output(line)
 
     def _handle_stderr(self, line: str) -> None:
         """Process a line of stderr output."""
@@ -191,6 +226,16 @@ class ConversionWorker(QObject):
         self._parse_progress_output(line)
 
     def _parse_progress_output(self, line: str) -> None:
+        """Parse progress from subprocess output.
+
+        Handles both Piper (pv-style) and Kokoro (chunk-based) progress formats.
+        """
+        if self._job.engine == "kokoro":
+            self._parse_kokoro_progress(line)
+        else:
+            self._parse_piper_progress(line)
+
+    def _parse_piper_progress(self, line: str) -> None:
         """Parse progress from pv output or make-audiobook status.
 
         pv output format: "1.5MiB 0:00:05 [300KiB/s]"
@@ -214,6 +259,39 @@ class ConversionWorker(QObject):
                 overall = int((current - 1) / total * 100)
                 self.progress.emit(str(self._current_file), overall)
 
+    def _parse_kokoro_progress(self, line: str) -> None:
+        """Parse progress from Kokoro CLI output.
+
+        Kokoro progress formats:
+        - Chunk progress: [■■■□□□] (N/M) ⠋
+        - Chapter start: Processing: Chapter Title
+        - Chapter done: Completed Chapter Title: N/M chunks processed
+        - Total chapters: Total Chapters: N
+        """
+        # Parse chunk progress: (N/M) pattern
+        chunk_match = re.search(r"\((\d+)/(\d+)\)", line)
+        if chunk_match:
+            current_chunk = int(chunk_match.group(1))
+            total_chunks = int(chunk_match.group(2))
+            if total_chunks > 0:
+                percent = int(current_chunk / total_chunks * 100)
+                self._current_file_progress = percent
+                if self._current_file:
+                    self.progress.emit(str(self._current_file), percent)
+            return
+
+        # Parse total chapters count
+        total_match = re.search(r"Total Chapters:\s*(\d+)", line)
+        if total_match:
+            self._kokoro_total_chapters = int(total_match.group(1))
+            return
+
+        # Parse completed chapter marker
+        completed_match = re.search(r"^Completed .+:\s*\d+/\d+ chunks processed", line)
+        if completed_match:
+            self._kokoro_completed_chapters = self._kokoro_completed_chapters + 1
+            return
+
     def _on_process_started(self) -> None:
         """Handle process start."""
         self._job.status = JobStatus.IN_PROGRESS
@@ -227,6 +305,9 @@ class ConversionWorker(QObject):
 
         if success:
             self._job.status = JobStatus.COMPLETED
+            # Set file progress to 100% on success
+            if self._current_file:
+                self.progress.emit(str(self._current_file), 100)
         else:
             self._job.status = JobStatus.FAILED
             self._job.error_message = f"Process exited with code {exit_code}"

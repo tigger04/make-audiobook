@@ -52,8 +52,7 @@ class SettingsPanel(QWidget):
         self._installed_voices = installed_voices or []
         self._setup_ui()
         self._setup_connections()
-        self._populate_voices()
-        self._on_engine_changed()  # Set initial state based on selected engine
+        self._on_engine_changed()  # Populates voices and sets initial state
 
     def _setup_ui(self) -> None:
         """Set up the widget UI."""
@@ -80,7 +79,11 @@ class SettingsPanel(QWidget):
         engine_layout = QHBoxLayout(engine_group)
 
         self._engine_selector = QComboBox()
-        self._engine_selector.addItems(["Piper (default)", "WhisperSpeech (experimental)"])
+        self._engine_selector.addItems([
+            "Piper (default)",
+            "Kokoro",
+            "WhisperSpeech (experimental)",
+        ])
         self._engine_selector.setToolTip("Select text-to-speech engine")
         engine_layout.addWidget(QLabel("Engine:"))
         engine_layout.addWidget(self._engine_selector)
@@ -195,24 +198,57 @@ class SettingsPanel(QWidget):
         self._on_settings_changed()
 
     def _on_engine_changed(self) -> None:
-        """Handle engine selector change."""
-        is_whisperspeech = self.get_selected_engine() == "whisperspeech"
+        """Handle engine selector change.
+
+        Updates voice list, random controls, and other UI state
+        based on the selected engine.
+        """
+        engine = self.get_selected_engine()
+        is_piper = engine == "piper"
         is_random_checked = self._random_checkbox.isChecked()
 
-        # Disable Piper voice controls when WhisperSpeech is selected
-        self._voice_selector.setEnabled(not is_whisperspeech and not is_random_checked)
-        self._random_checkbox.setEnabled(not is_whisperspeech)
+        # Swap voice list based on engine
+        self._populate_voices_for_engine(engine)
+
+        # Voice selector: enabled for Piper (when not random) and Kokoro, disabled for WhisperSpeech
+        self._voice_selector.setEnabled(
+            (is_piper and not is_random_checked) or engine == "kokoro"
+        )
+
+        # Random only available for Piper
+        self._random_checkbox.setEnabled(is_piper)
 
         # Random filter should only be visible when Piper is selected AND random is checked
-        self._random_filter.setVisible(not is_whisperspeech and is_random_checked)
-        self._random_filter_label.setVisible(not is_whisperspeech and is_random_checked)
-        self._random_filter.setEnabled(not is_whisperspeech and is_random_checked)
-        self._random_filter_label.setEnabled(not is_whisperspeech and is_random_checked)
-
-        # WhisperSpeech supports speed control, so keep speed slider enabled
-        # The length_scale concept applies to Piper, but WhisperSpeech may have its own speed control
+        self._random_filter.setVisible(is_piper and is_random_checked)
+        self._random_filter_label.setVisible(is_piper and is_random_checked)
+        self._random_filter.setEnabled(is_piper and is_random_checked)
+        self._random_filter_label.setEnabled(is_piper and is_random_checked)
 
         self._on_settings_changed()
+
+    def _populate_voices_for_engine(self, engine: str) -> None:
+        """Populate the voice dropdown for the given engine.
+
+        Args:
+            engine: Engine name ("piper", "kokoro", or "whisperspeech")
+        """
+        if engine == "kokoro":
+            self._populate_kokoro_voices()
+        elif engine == "whisperspeech":
+            self._voice_selector.clear()
+            self._voice_selector.addItem("Default", "whisperspeech-default")
+        else:
+            self._populate_voices()
+
+    def _populate_kokoro_voices(self) -> None:
+        """Populate voice selector with Kokoro built-in voices."""
+        from gui.models.tts_engine import KokoroEngine
+
+        self._voice_selector.clear()
+        kokoro = KokoroEngine()
+        for voice in kokoro.get_voices():
+            display = f"{voice.name} - {voice.quality}"
+            self._voice_selector.addItem(display, voice.key)
 
     def get_selected_voice(self) -> Optional[str]:
         """Get the currently selected voice key.
@@ -278,11 +314,29 @@ class SettingsPanel(QWidget):
     def get_selected_engine(self) -> str:
         """Get the selected TTS engine name."""
         text = self._engine_selector.currentText()
+        if "Kokoro" in text:
+            return "kokoro"
         if "WhisperSpeech" in text:
             return "whisperspeech"
         return "piper"
 
+    def set_engine(self, engine: str) -> None:
+        """Set the selected TTS engine by name.
+
+        Args:
+            engine: Engine name ("piper", "kokoro", or "whisperspeech")
+        """
+        engine_index_map = {
+            "piper": 0,
+            "kokoro": 1,
+            "whisperspeech": 2,
+        }
+        index = engine_index_map.get(engine, 0)
+        self._engine_selector.setCurrentIndex(index)
+
     def refresh_voices(self, voices: list[Voice]) -> None:
-        """Refresh the voice list."""
+        """Refresh the Piper voice list."""
         self._installed_voices = voices
-        self._populate_voices()
+        # Only repopulate if Piper is the current engine
+        if self.get_selected_engine() == "piper":
+            self._populate_voices()

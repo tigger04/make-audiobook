@@ -64,7 +64,7 @@ You can add files in three ways:
 2. **Add Files button** - Click "Add Files..." to open a file picker
 3. **File menu** - Use File → Open Files...
 
-Supported formats: `.txt`, `.epub`, `.docx`, `.md`, `.html`, `.pdf`
+Supported formats: `.txt`, `.epub`, `.docx`, `.md`, `.html`, `.pdf`, `.mobi`
 
 ### Managing the File List
 
@@ -72,18 +72,23 @@ Supported formats: `.txt`, `.epub`, `.docx`, `.md`, `.html`, `.pdf`
 - **Clear All** - Remove all files from the list
 - Files show filename and size
 
-### Voice Settings
+### Engine and Voice Settings
+
+**TTS Engine**
+- Select from three engines in the Engine dropdown:
+  - **Piper** (default) — fast neural TTS with 100+ downloadable voices
+  - **Kokoro** — high-quality 82M parameter TTS with 26 built-in voices and native epub/pdf chapter support
+  - **WhisperSpeech** (experimental) — research-grade TTS
+- Changing the engine updates the voice list automatically
 
 **Voice Selection**
-- Select a specific installed voice from the dropdown
-- Check "Use random voice" to have the app select a random voice for each file
+- Select a specific voice from the dropdown (voices change based on engine)
+- For Piper: check "Use random voice" to select a random voice for each file
 - When random is enabled, optionally filter by quality (High, Medium, Low, or Any)
 
-**Speed (Length Scale)**
-- Adjust the slider to control speech speed
-- Higher values = slower speech
-- Default: 1.5x (slightly slower than normal, good for audiobooks)
-- Range: 0.5x (fast) to 3.0x (very slow)
+**Speed**
+- **Piper:** Length Scale slider controls speech speed (higher = slower, default 1.5x, range 0.5x–3.0x)
+- **Kokoro:** Speed multiplier (1.0 = normal, values above 1.0 = faster)
 
 **Metadata (ID3 Tags)**
 - Enter Author name (e.g., "Jane Austen")
@@ -175,6 +180,7 @@ Settings are automatically saved:
 - Window position and size
 - Last used speed setting
 - Last selected voice
+- Last selected TTS engine
 
 Configuration is stored in:
 - macOS: `~/Library/Application Support/make-audiobook/config.json`
@@ -207,7 +213,11 @@ piper-voices-setup
 
 Check that all dependencies are installed:
 ```bash
+# For Piper engine
 which piper ffmpeg pandoc
+
+# For Kokoro engine
+which kokoro-tts espeak-ng ffmpeg pandoc
 ```
 
 See [Installation Guide](installation.md) for dependency installation.
@@ -216,7 +226,7 @@ See [Installation Guide](installation.md) for dependency installation.
 
 Ensure your files are:
 - DRM-free (this tool cannot process DRM-protected files)
-- In a supported format (.txt, .epub, .docx, .md, .html, .pdf)
+- In a supported format (.txt, .epub, .docx, .md, .html, .pdf, .mobi)
 
 ## See Also
 
