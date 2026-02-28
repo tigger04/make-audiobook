@@ -93,6 +93,9 @@ build-macos:
 release:
 	@echo "Creating release $(RELEASE_VERSION) (current: $(CURRENT_VERSION))..."
 	@echo ""
+	@echo "Stamping version $(RELEASE_VERSION) into scripts..."
+	sed -i '' 's/^VERSION=".*"/VERSION="$(RELEASE_VERSION)"/' make-audiobook piper-voices-setup
+	@echo ""
 	@echo "Running tests first..."
 	$(MAKE) test
 	@echo ""

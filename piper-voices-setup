@@ -7,6 +7,38 @@ source "$(dirname "$0")"/shell-and-scripting-helpers/.qfuncs.sh
 
 set -euo pipefail
 
+VERSION="3.3.0"
+
+get_version() {
+   local dir
+   dir="$(cd "$(dirname "$0")" && pwd)"
+   if git -C "$dir" describe --tags --abbrev=0 2>/dev/null; then
+      return
+   fi
+   echo "v$VERSION"
+}
+
+if [[ "${1:-}" =~ ^--?[Vv](ersion)?$ ]]; then
+   echo "piper-voices-setup $(get_version)"
+   exit 0
+fi
+
+if [[ "${1:-}" =~ ^--?h(elp)?$ ]]; then
+   cat <<EOM
+USAGE:
+   piper-voices-setup
+
+   Install or update the default set of Piper TTS voices.
+   Voices are downloaded from HuggingFace and stored in:
+     ~/.local/share/piper/voices/
+
+OPTIONS:
+   -h / --help     Show this help message
+   -V / --version  Show version
+EOM
+   exit 0
+fi
+
 dest=~/.local/share/piper/voices
 base_url="https://huggingface.co/rhasspy/piper-voices/resolve/main"
 

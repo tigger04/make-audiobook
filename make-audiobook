@@ -38,7 +38,23 @@ register_for_cleanup() {
    cleanup_targets+=("$@")
 }
 
-if [ $# -eq 0 ] || [[ $1 =~ ^--?h(elp)?$ ]]; then
+VERSION="3.3.0"
+
+get_version() {
+   local dir
+   dir="$(cd "$(dirname "$0")" && pwd)"
+   if git -C "$dir" describe --tags --abbrev=0 2>/dev/null; then
+      return
+   fi
+   echo "v$VERSION"
+}
+
+if [[ "${1:-}" =~ ^--?[Vv](ersion)?$ ]]; then
+   echo "make-audiobook $(get_version)"
+   exit 0
+fi
+
+show_usage() {
    cat - <<EOM
 USAGE:
    $cmd_base [OPTIONS] TEXT_FILE [TEXT_FILE2 ...]
@@ -52,6 +68,8 @@ WTF:
    Note: .mobi support requires Calibre (ebook-convert).
 
 OPTIONS:
+   -h / --help (show this help message)
+   -V / --version (show version)
    -u / --update-voices (update installed Piper voices)
    -r / --random-voice[=FILTER] (use a random voice for each file)
    -l / --list-voices (list voices installed)
@@ -70,7 +88,16 @@ OPTIONS:
    --title=TITLE (set title for ID3 tags)
    --voice=PATH (specify voice model path directly)
 EOM
-   exit 1
+}
+
+if [[ $# -eq 0 ]]; then
+   show_usage
+   exit 2
+fi
+
+if [[ $1 =~ ^--?h(elp)?$ ]]; then
+   show_usage
+   exit 0
 fi
 
 mapfile -t voices_installed < <(fd . -e onnx ~/.local/share/piper/voices)
