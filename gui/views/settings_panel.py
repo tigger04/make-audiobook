@@ -57,6 +57,19 @@ class SettingsPanel(QWidget):
         """Set up the widget UI."""
         layout = QVBoxLayout(self)
 
+        # Engine selection group (Phase 1 - experimental)
+        engine_group = QGroupBox("TTS Engine (Experimental)")
+        engine_layout = QHBoxLayout(engine_group)
+
+        self._engine_selector = QComboBox()
+        self._engine_selector.addItems(["Piper (default)", "WhisperSpeech (experimental)"])
+        self._engine_selector.setToolTip("Select text-to-speech engine")
+        engine_layout.addWidget(QLabel("Engine:"))
+        engine_layout.addWidget(self._engine_selector)
+        engine_layout.addStretch()
+
+        layout.addWidget(engine_group)
+
         # Voice selection group
         voice_group = QGroupBox("Voice")
         voice_inner = QVBoxLayout(voice_group)
@@ -122,6 +135,7 @@ class SettingsPanel(QWidget):
 
     def _setup_connections(self) -> None:
         """Connect signals and slots."""
+        self._engine_selector.currentIndexChanged.connect(self._on_settings_changed)
         self._voice_selector.currentIndexChanged.connect(self._on_settings_changed)
         self._random_checkbox.toggled.connect(self._on_random_toggled)
         self._random_filter.currentIndexChanged.connect(self._on_settings_changed)
@@ -215,6 +229,13 @@ class SettingsPanel(QWidget):
     def get_title(self) -> str:
         """Get the title field value (trimmed)."""
         return self._title_field.text().strip()
+
+    def get_selected_engine(self) -> str:
+        """Get the selected TTS engine name."""
+        text = self._engine_selector.currentText()
+        if "WhisperSpeech" in text:
+            return "whisperspeech"
+        return "piper"
 
     def refresh_voices(self, voices: list[Voice]) -> None:
         """Refresh the voice list."""

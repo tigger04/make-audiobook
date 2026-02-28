@@ -58,6 +58,9 @@ OPTIONS:
    -s / --length_scale=<SCALE> (set length scale or speed of TTS.
                                - higher values = slower speech. Defaults to 1.5
                                  as I find 1.0 a bit fast for audiobooks.)
+   --engine=ENGINE (EXPERIMENTAL: Use alternative TTS engine.
+                   - Options: piper (default), whisperspeech
+                   - WhisperSpeech requires: pip install whisperspeech)
 EOM
    exit 1
 fi

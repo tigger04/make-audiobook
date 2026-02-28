@@ -13,13 +13,14 @@ from typing import Optional
 
 @dataclass
 class Voice:
-    """Represents a single Piper TTS voice.
+    """Represents a single TTS voice.
 
     Attributes:
         key: Unique identifier (e.g., "en_US-ryan-high")
         name: Human-readable name (e.g., "Ryan")
         language: Language code (e.g., "en_US")
         quality: Quality level ("low", "medium", "high")
+        engine: TTS engine ("piper", "whisperspeech", etc.)
         files: Dictionary of file metadata (size, checksum)
         size_bytes: Total size of all voice files
         installed: Whether the voice is installed locally
@@ -31,6 +32,7 @@ class Voice:
     quality: str
     files: dict
     size_bytes: int
+    engine: str = "piper"  # Default to piper for backward compatibility
     installed: bool = False
 
 
@@ -84,6 +86,7 @@ class VoiceCatalog:
                         quality=quality_level,
                         files=files,
                         size_bytes=total_size,
+                        engine="piper",  # Catalog is for Piper voices
                     )
                     voices.append(voice)
 
@@ -107,6 +110,7 @@ class VoiceCatalog:
         self,
         language: Optional[str] = None,
         quality: Optional[str] = None,
+        engine: Optional[str] = None,
         installed: Optional[bool] = None,
     ) -> list[Voice]:
         """Return voices matching all provided criteria."""
@@ -117,6 +121,9 @@ class VoiceCatalog:
 
         if quality is not None:
             result = [v for v in result if v.quality == quality]
+
+        if engine is not None:
+            result = [v for v in result if v.engine == engine]
 
         if installed is not None:
             result = [v for v in result if v.installed == installed]

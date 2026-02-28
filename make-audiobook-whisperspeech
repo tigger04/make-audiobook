@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# ABOUTME: Experimental WhisperSpeech wrapper for make-audiobook
+# ABOUTME: Demonstrates TTS engine selection capability
+
+set -euo pipefail
+IFS=$'\n\t'
+
+# Get the directory of this script
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Source helpers if available
+if [[ -f "$SCRIPT_DIR/shell-and-scripting-helpers/.qfuncs.sh" ]]; then
+    source "$SCRIPT_DIR/shell-and-scripting-helpers/.qfuncs.sh"
+fi
+if [[ -f "$SCRIPT_DIR/shell-and-scripting-helpers/.colours.sh" ]]; then
+    source "$SCRIPT_DIR/shell-and-scripting-helpers/.colours.sh"
+fi
+
+# Default to WhisperSpeech engine
+ENGINE="whisperspeech"
+
+# Check for help flag
+if [[ $# -eq 0 ]] || [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
+    cat <<EOF
+USAGE: $(basename "$0") [OPTIONS] TEXT_FILE
+
+EXPERIMENTAL: Convert text to audio using WhisperSpeech TTS engine.
+
+This is a demonstration wrapper showing how alternative TTS engines
+can be integrated into make-audiobook. WhisperSpeech provides a
+single high-quality English voice.
+
+OPTIONS:
+    -h, --help          Show this help message
+    --check             Check if WhisperSpeech is available
+
+REQUIREMENTS:
+    pip install whisperspeech torch soundfile
+
+NOTE: This is experimental. Use 'make-audiobook' for production use.
+EOF
+    exit 0
+fi
+
+# Check if WhisperSpeech is available
+if [[ "$1" == "--check" ]]; then
+    if python3 -c "import whisperspeech" 2>/dev/null; then
+        echo "✓ WhisperSpeech is installed"
+        exit 0
+    else
+        echo "✗ WhisperSpeech is not installed"
+        echo "Install with: pip install whisperspeech torch soundfile"
+        exit 1
+    fi
+fi
+
+# Process file
+INPUT_FILE="$1"
+if [[ ! -f "$INPUT_FILE" ]]; then
+    echo "Error: File not found: $INPUT_FILE" >&2
+    exit 1
+fi
+
+# Convert to plain text using pandoc (like main script)
+TXT_FILE="${INPUT_FILE%.*}.txt"
+WAV_FILE="${INPUT_FILE%.*}.wav"
+MP3_FILE="${INPUT_FILE%.*}.mp3"
+
+echo "Converting to plain text..."
+pandoc "$INPUT_FILE" -t plain -o "$TXT_FILE" 2>/dev/null || cp "$INPUT_FILE" "$TXT_FILE"
+
+echo "Synthesizing with WhisperSpeech..."
+python3 - "$TXT_FILE" "$WAV_FILE" <<'PYTHON_SCRIPT'
+import sys
+import importlib
+
+def synthesize(text_file, output_file):
+    """Synthesize text using WhisperSpeech."""
+    try:
+        # Import WhisperSpeech
+        torch = importlib.import_module("torch")
+        ws = importlib.import_module("whisperspeech.pipeline")
+        sf = importlib.import_module("soundfile")
+
+        # Read text
+        with open(text_file, 'r') as f:
+            text = f.read()
+
+        # Initialize pipeline
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"Using device: {device}")
+        pipeline = ws.Pipeline(device=device)
+
+        # Generate audio
+        print("Generating audio...")
+        audio = pipeline.generate(text[:5000])  # Limit for demo
+
+        # Save
+        if hasattr(audio, "cpu"):
+            audio = audio.cpu().numpy()
+        sf.write(output_file, audio, 24000)
+
+        print(f"Saved to {output_file}")
+
+    except ImportError as e:
+        print(f"Error: Missing dependency - {e}")
+        print("Install with: pip install whisperspeech torch soundfile")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: python script.py input.txt output.wav")
+        sys.exit(1)
+
+    synthesize(sys.argv[1], sys.argv[2])
+PYTHON_SCRIPT
+
+# Convert to MP3
+echo "Converting to MP3..."
+ffmpeg -i "$WAV_FILE" -codec:a libmp3lame -b:a 128k "$MP3_FILE" -y 2>/dev/null
+
+# Cleanup
+rm -f "$TXT_FILE" "$WAV_FILE"
+
+echo "✓ Created: $MP3_FILE"

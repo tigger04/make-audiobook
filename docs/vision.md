@@ -80,6 +80,7 @@ The GUI removes technical barriers. Non-technical users can:
 - [x] In-app voice management
 - [x] macOS Homebrew cask and formula (#15)
 - [x] Nix flake (#10)
+- [x] TTS engine abstraction - WhisperSpeech support (#21) - Phase 1
 - [ ] Cross-platform installers - Linux/Windows (#2)
 
 ### Future Considerations

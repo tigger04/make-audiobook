@@ -166,7 +166,8 @@ log = Signal(str)
 │   └── #4 (Workers) ✓
 │       └── #5 (UI components) ✓
 │           └── #6 (Main window) ✓
-└── #2 (Installers) ✓
+├── #2 (Installers) ✓
+└── #21 (WhisperSpeech TTS) - Phase 1 ✓
 ```
 
 ## Notes

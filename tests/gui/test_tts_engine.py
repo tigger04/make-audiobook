@@ -1,0 +1,360 @@
+# ABOUTME: Unit tests for TTSEngine abstraction and implementations.
+# ABOUTME: Tests the interface contract and engine-specific behavior.
+
+"""Tests for TTS engine abstraction."""
+
+import tempfile
+from abc import ABC
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from gui.models.tts_engine import (
+    TTSEngine,
+    PiperEngine,
+    WhisperSpeechEngine,
+    EngineNotAvailableError,
+)
+from gui.models.voice import Voice
+
+
+class TestTTSEngineInterface:
+    """Test the abstract TTSEngine interface."""
+
+    def test_ttsengine_is_abstract_base_class(self):
+        """TTSEngine should be an abstract base class."""
+        assert issubclass(TTSEngine, ABC)
+
+    def test_ttsengine_requires_name_property(self):
+        """TTSEngine should require a name property."""
+        # Create a concrete implementation without name property implementation
+        # This should fail at instantiation since name is abstract
+        with pytest.raises(TypeError, match="Can't instantiate abstract class"):
+            class BadEngine(TTSEngine):
+                # Missing the @property name method
+                def is_available(self):
+                    return True
+
+                def synthesize(self, text, voice, output_path, **kwargs):
+                    pass
+
+                def get_voices(self):
+                    return []
+
+            BadEngine()
+
+    def test_ttsengine_requires_synthesize_method(self):
+        """TTSEngine should require a synthesize method."""
+        # Create a concrete implementation without synthesize
+        class BadEngine(TTSEngine):
+            @property
+            def name(self):
+                return "bad"
+
+            def is_available(self):
+                return True
+
+            def get_voices(self):
+                return []
+
+        # Should not be instantiable
+        with pytest.raises(TypeError, match="Can't instantiate abstract class"):
+            BadEngine()
+
+    def test_ttsengine_requires_is_available_method(self):
+        """TTSEngine should require an is_available method."""
+        # Create a concrete implementation without is_available
+        class BadEngine(TTSEngine):
+            @property
+            def name(self):
+                return "bad"
+
+            def synthesize(self, text, voice, output_path, **kwargs):
+                pass
+
+            def get_voices(self):
+                return []
+
+        # Should not be instantiable
+        with pytest.raises(TypeError, match="Can't instantiate abstract class"):
+            BadEngine()
+
+    def test_ttsengine_requires_get_voices_method(self):
+        """TTSEngine should require a get_voices method."""
+        # Create a concrete implementation without get_voices
+        class BadEngine(TTSEngine):
+            @property
+            def name(self):
+                return "bad"
+
+            def is_available(self):
+                return True
+
+            def synthesize(self, text, voice, output_path, **kwargs):
+                pass
+
+        # Should not be instantiable
+        with pytest.raises(TypeError, match="Can't instantiate abstract class"):
+            BadEngine()
+
+
+class TestPiperEngine:
+    """Test the PiperEngine implementation."""
+
+    @pytest.fixture
+    def piper_engine(self):
+        """Create a PiperEngine instance."""
+        return PiperEngine()
+
+    @pytest.fixture
+    def sample_voice(self):
+        """Create a sample Piper voice."""
+        return Voice(
+            key="en_US-ryan-high",
+            name="Ryan",
+            language="en_US",
+            quality="high",
+            engine="piper",
+            files={
+                ".onnx": {"size_bytes": 63201980},
+                ".onnx.json": {"size_bytes": 548},
+            },
+            size_bytes=63202528,
+            installed=True,
+        )
+
+    def test_piper_engine_name(self, piper_engine):
+        """PiperEngine should have correct name."""
+        assert piper_engine.name == "piper"
+
+    @patch("gui.models.tts_engine.shutil.which")
+    def test_piper_engine_is_available_when_installed(self, mock_which, piper_engine):
+        """PiperEngine should be available when piper is installed."""
+        mock_which.return_value = "/usr/local/bin/piper"
+        assert piper_engine.is_available() is True
+        mock_which.assert_called_once_with("piper")
+
+    @patch("gui.models.tts_engine.shutil.which")
+    def test_piper_engine_is_not_available_when_not_installed(
+        self, mock_which, piper_engine
+    ):
+        """PiperEngine should not be available when piper is not installed."""
+        mock_which.return_value = None
+        assert piper_engine.is_available() is False
+
+    @patch("gui.models.tts_engine.subprocess.run")
+    @patch("gui.models.tts_engine.shutil.which")
+    def test_piper_engine_synthesize_success(
+        self, mock_which, mock_run, piper_engine, sample_voice
+    ):
+        """PiperEngine should synthesize text successfully."""
+        mock_which.return_value = "/usr/local/bin/piper"
+        mock_run.return_value = MagicMock(returncode=0)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "output.wav"
+            text = "Hello, world!"
+
+            piper_engine.synthesize(text, sample_voice, output_path)
+
+            # Check subprocess was called correctly
+            mock_run.assert_called_once()
+            call_args = mock_run.call_args[0][0]
+            assert call_args[0] == "/usr/local/bin/piper"
+            assert "--model" in call_args
+            assert "--output-file" in call_args
+            assert str(output_path) in call_args
+
+    @patch("gui.models.tts_engine.subprocess.run")
+    @patch("gui.models.tts_engine.shutil.which")
+    def test_piper_engine_synthesize_with_length_scale(
+        self, mock_which, mock_run, piper_engine, sample_voice
+    ):
+        """PiperEngine should pass length_scale parameter."""
+        mock_which.return_value = "/usr/local/bin/piper"
+        mock_run.return_value = MagicMock(returncode=0)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "output.wav"
+            text = "Hello, world!"
+
+            piper_engine.synthesize(
+                text, sample_voice, output_path, length_scale=2.0
+            )
+
+            call_args = mock_run.call_args[0][0]
+            assert "--length_scale" in call_args
+            assert "2.0" in call_args
+
+    @patch("gui.models.tts_engine.shutil.which")
+    def test_piper_engine_synthesize_fails_when_not_available(
+        self, mock_which, piper_engine, sample_voice
+    ):
+        """PiperEngine should raise error when not available."""
+        mock_which.return_value = None
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "output.wav"
+            text = "Hello, world!"
+
+            with pytest.raises(EngineNotAvailableError, match="Piper is not installed"):
+                piper_engine.synthesize(text, sample_voice, output_path)
+
+    @patch("gui.models.tts_engine.VOICES_DIR")
+    def test_piper_engine_get_voices(self, mock_voices_dir, piper_engine):
+        """PiperEngine should return installed voices."""
+        # Create mock Path objects
+        mock_path1 = MagicMock()
+        mock_path1.stem = "en_US-ryan-high"
+        mock_path1.parent.parent.name = "en_US"
+        mock_path1.stat.return_value = MagicMock(st_size=1000000)
+        mock_path1.with_suffix.return_value.exists.return_value = True
+        mock_path1.with_suffix.return_value.stat.return_value = MagicMock(st_size=500)
+
+        mock_path2 = MagicMock()
+        mock_path2.stem = "en_GB-alan-medium"
+        mock_path2.parent.parent.name = "en_GB"
+        mock_path2.stat.return_value = MagicMock(st_size=2000000)
+        mock_path2.with_suffix.return_value.exists.return_value = False
+
+        # Setup mock directory
+        mock_voices_dir.exists.return_value = True
+        mock_voices_dir.glob.return_value = [mock_path1, mock_path2]
+
+        voices = piper_engine.get_voices()
+
+        assert len(voices) == 2
+        assert all(isinstance(v, Voice) for v in voices)
+        assert voices[0].key == "en_GB-alan-medium"  # Sorted by language
+        assert voices[0].engine == "piper"
+        assert voices[1].key == "en_US-ryan-high"
+        assert voices[1].engine == "piper"
+
+
+class TestWhisperSpeechEngine:
+    """Test the WhisperSpeechEngine implementation."""
+
+    @pytest.fixture
+    def whisper_engine(self):
+        """Create a WhisperSpeechEngine instance."""
+        return WhisperSpeechEngine()
+
+    @pytest.fixture
+    def sample_voice(self):
+        """Create a sample WhisperSpeech voice."""
+        return Voice(
+            key="whisperspeech-default",
+            name="Default",
+            language="en",
+            quality="high",
+            engine="whisperspeech",
+            files={},
+            size_bytes=0,
+            installed=True,
+        )
+
+    def test_whisperspeech_engine_name(self, whisper_engine):
+        """WhisperSpeechEngine should have correct name."""
+        assert whisper_engine.name == "whisperspeech"
+
+    @patch("gui.models.tts_engine.importlib.util.find_spec")
+    def test_whisperspeech_engine_is_available_when_installed(
+        self, mock_find_spec, whisper_engine
+    ):
+        """WhisperSpeechEngine should be available when package is installed."""
+        mock_find_spec.return_value = MagicMock()  # Non-None means found
+        assert whisper_engine.is_available() is True
+        mock_find_spec.assert_called_once_with("whisperspeech")
+
+    @patch("gui.models.tts_engine.importlib.util.find_spec")
+    def test_whisperspeech_engine_is_not_available_when_not_installed(
+        self, mock_find_spec, whisper_engine
+    ):
+        """WhisperSpeechEngine should not be available when package is not installed."""
+        mock_find_spec.return_value = None
+        assert whisper_engine.is_available() is False
+
+    @pytest.mark.skip(reason="WhisperSpeech integration test requires actual package")
+    @patch("gui.models.tts_engine.importlib.util.find_spec")
+    def test_whisperspeech_engine_synthesize_success(
+        self, mock_find_spec, whisper_engine, sample_voice
+    ):
+        """WhisperSpeechEngine should synthesize text successfully."""
+        # This test is skipped as it requires actual WhisperSpeech installation
+        # The interface contract is tested by the abstract base class tests
+        pass
+
+    @patch("gui.models.tts_engine.importlib.util.find_spec")
+    def test_whisperspeech_engine_synthesize_fails_when_not_available(
+        self, mock_find_spec, whisper_engine, sample_voice
+    ):
+        """WhisperSpeechEngine should raise error when not available."""
+        mock_find_spec.return_value = None
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "output.wav"
+            text = "Hello, world!"
+
+            with pytest.raises(
+                EngineNotAvailableError, match="WhisperSpeech is not installed"
+            ):
+                whisper_engine.synthesize(text, sample_voice, output_path)
+
+    def test_whisperspeech_engine_get_voices(self, whisper_engine):
+        """WhisperSpeechEngine should return default voice."""
+        voices = whisper_engine.get_voices()
+
+        assert len(voices) == 1
+        assert voices[0].key == "whisperspeech-default"
+        assert voices[0].engine == "whisperspeech"
+        assert voices[0].language == "en"
+
+
+class TestEngineRegistry:
+    """Test the engine registry functionality."""
+
+    def test_get_engine_by_name(self):
+        """Should retrieve engine by name."""
+        from gui.models.tts_engine import get_engine
+
+        piper = get_engine("piper")
+        assert isinstance(piper, PiperEngine)
+        assert piper.name == "piper"
+
+        whisper = get_engine("whisperspeech")
+        assert isinstance(whisper, WhisperSpeechEngine)
+        assert whisper.name == "whisperspeech"
+
+    def test_get_engine_invalid_name_raises_error(self):
+        """Should raise error for invalid engine name."""
+        from gui.models.tts_engine import get_engine
+
+        with pytest.raises(ValueError, match="Unknown engine: invalid"):
+            get_engine("invalid")
+
+    def test_get_available_engines(self):
+        """Should return list of available engines."""
+        from gui.models.tts_engine import get_available_engines
+
+        with patch("gui.models.tts_engine.shutil.which") as mock_which:
+            with patch("gui.models.tts_engine.importlib.util.find_spec") as mock_spec:
+                # Both engines available
+                mock_which.return_value = "/usr/local/bin/piper"
+                mock_spec.return_value = MagicMock()
+
+                engines = get_available_engines()
+                assert len(engines) == 2
+                assert any(e.name == "piper" for e in engines)
+                assert any(e.name == "whisperspeech" for e in engines)
+
+                # Only Piper available
+                mock_spec.return_value = None
+                engines = get_available_engines()
+                assert len(engines) == 1
+                assert engines[0].name == "piper"
+
+                # Neither available
+                mock_which.return_value = None
+                engines = get_available_engines()
+                assert len(engines) == 0
