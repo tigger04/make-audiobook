@@ -272,7 +272,7 @@ if [[ "$engine" == "kokoro" ]]; then
       die "kokoro-tts not found. Install: pipx install kokoro-tts"
    fi
    if ! command -v espeak-ng &>/dev/null; then
-      die "espeak-ng not found. Install: brew install espeak"
+      die "espeak-ng not found. Install: brew install espeak-ng"
    fi
 fi
 

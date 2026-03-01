@@ -11,7 +11,7 @@ class MakeAudiobook < Formula
 
   depends_on "bash" => "5.0"
   depends_on "calibre" => :recommended  # for .mobi file support
-  depends_on "espeak"                    # required by Kokoro TTS engine
+  depends_on "espeak-ng"                 # required by Kokoro TTS engine
   depends_on "ffmpeg"
   depends_on "pandoc"
   depends_on "fzf"
@@ -26,32 +26,24 @@ class MakeAudiobook < Formula
   end
 
   def post_install
-    ohai "Installing piper-tts via pipx..."
-    system "pipx", "install", "piper-tts"
-    # kokoro-tts requires Python <3.13; find highest compatible version
-    py312 = Formula["python@3.12"].opt_bin/"python3.12"
-    if py312.exist?
-      ohai "Installing kokoro-tts via pipx (Python 3.12)..."
-      system "pipx", "install", "kokoro-tts", "--python", py312
-    else
-      ohai "kokoro-tts requires Python <3.13. Install python@3.12, then: pipx install kokoro-tts --python python3.12"
-    end
-    ohai "To install default voices, run: piper-voices-setup"
+    ohai "Run the following to complete setup:"
+    ohai "  pipx install piper-tts"
+    ohai "  pipx install kokoro-tts --python python3.12"
+    ohai "  piper-voices-setup"
   end
 
   def caveats
     <<~EOS
-      piper-tts has been installed via pipx.
-
-      To install default English voices, run:
+      Complete setup by running:
+        pipx install piper-tts
+        pipx install kokoro-tts --python python3.12
         piper-voices-setup
 
-      For additional voices, visit:
-        https://huggingface.co/rhasspy/piper-voices
+      For .mobi file support, install calibre:
+        brew install --cask calibre
 
-      For Kokoro TTS engine (optional, higher quality):
-        brew install espeak
-        pipx install kokoro-tts
+      For additional Piper voices, visit:
+        https://huggingface.co/rhasspy/piper-voices
 
       For the GUI version, install the cask instead:
         brew install --cask tigger04/tap/make-audiobook
@@ -59,6 +51,6 @@ class MakeAudiobook < Formula
   end
 
   test do
-    assert_match "usage", shell_output("#{bin}/make-audiobook --help", 0)
+    assert_match "USAGE", shell_output("#{bin}/make-audiobook --help", 0)
   end
 end
