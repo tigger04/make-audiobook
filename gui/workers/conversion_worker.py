@@ -38,13 +38,15 @@ class ConversionWorker(QObject):
     Parses output for progress updates and handles cancellation.
 
     Signals:
-        progress(str, int): Filename and progress percentage
+        progress(str, int): Filename and file-level progress percentage
+        overall_progress(int): Overall progress percentage across all files
         finished(str, bool): Filename and success status
         error(str): Human-readable error message
         log(str): Log message from process output
     """
 
     progress = Signal(str, int)
+    overall_progress = Signal(int)
     finished = Signal(str, bool)
     error = Signal(str)
     log = Signal(str)
@@ -294,8 +296,9 @@ class ConversionWorker(QObject):
             if current <= len(self._job.files):
                 self._current_file = self._job.files[current - 1]
                 self._current_file_progress = 0
+                self.progress.emit(str(self._current_file), 0)
                 overall = int((current - 1) / total * 100)
-                self.progress.emit(str(self._current_file), overall)
+                self.overall_progress.emit(overall)
 
     def _parse_kokoro_progress(self, line: str) -> None:
         """Parse progress from Kokoro CLI output.

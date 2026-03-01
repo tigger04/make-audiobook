@@ -264,6 +264,7 @@ class MainWindow(QMainWindow):
         self._conversion_worker.moveToThread(self._conversion_thread)
         self._conversion_thread.started.connect(self._conversion_worker.start)
         self._conversion_worker.progress.connect(self._on_conversion_progress)
+        self._conversion_worker.overall_progress.connect(self._progress_panel.set_overall_progress)
         self._conversion_worker.log.connect(self._progress_panel.add_log)
         self._conversion_worker.error.connect(self._on_conversion_error)
         self._conversion_worker.finished.connect(self._on_conversion_finished)

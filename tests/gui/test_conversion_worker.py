@@ -267,17 +267,15 @@ class TestConversionWorker:
         job = ConversionJob(files=files, voice_key="en_US-ryan-high")
         worker = ConversionWorker(job=job)
 
-        progress_updates = []
-        worker.progress.connect(lambda f, p: progress_updates.append((f, p)))
+        overall_updates = []
+        worker.overall_progress.connect(lambda p: overall_updates.append(p))
 
         # Simulate "Processing file 4 of 4"
         worker._parse_progress_output("Processing file 4 of 4")
 
         # For file 4 of 4, overall should be 75% ((4-1)/4 * 100)
-        # The key is it should not be stuck at a wrong value
-        assert len(progress_updates) >= 1
-        last_update = progress_updates[-1]
-        assert last_update[1] == 75
+        assert len(overall_updates) >= 1
+        assert overall_updates[-1] == 75
 
     def test_worker_parses_file_progress_from_processing_message(self, qapp, tmp_path):
         """Test that Processing message resets file tracking."""
