@@ -2,10 +2,14 @@
 # ABOUTME: Install/update selected Piper voices by downloading individual files.
 # ABOUTME: Stores voices in nested structure: ~/.local/share/piper/voices/{lang}/{voice_key}/
 
-# shellcheck source=shell-and-scripting-helpers/.qfuncs.sh
-source "$(dirname "$0")"/shell-and-scripting-helpers/.qfuncs.sh
-
 set -euo pipefail
+
+# --- Shell helpers ---
+die()       { printf '💀 %s: %s\n' "$(basename "$0")" "$*" >&2; exit 1; }
+warn()      { echo -e "⚠️ $*" >&2; }
+errortext() { echo -e "⛔️ $*" >&2; }
+info()      { echo -e "🚹 $*" >&2; }
+checktext() { echo "☑️ $*" >&2; }
 
 VERSION="3.6.0"
 

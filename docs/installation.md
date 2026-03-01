@@ -28,7 +28,7 @@ The cask installs the full GUI application with all dependencies bundled. The fo
 
 2. Clone and run the installer:
    ```bash
-   git clone --recursive https://github.com/tigger04/make-audiobook
+   git clone https://github.com/tigger04/make-audiobook
    cd make-audiobook
    ./install-dependencies
    ```
@@ -126,7 +126,7 @@ chmod +x make-audiobook.AppImage
 
 3. Clone and set up:
    ```bash
-   git clone --recursive https://github.com/tigger04/make-audiobook
+   git clone https://github.com/tigger04/make-audiobook
    cd make-audiobook
    ./piper-voices-setup
    ```
@@ -167,7 +167,7 @@ Download the installer from the [releases page](https://github.com/tigger04/make
 
 3. Download or clone the repository:
    ```powershell
-   git clone --recursive https://github.com/tigger04/make-audiobook
+   git clone https://github.com/tigger04/make-audiobook
    cd make-audiobook
    ```
 

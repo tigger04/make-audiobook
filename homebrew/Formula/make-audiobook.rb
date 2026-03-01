@@ -20,25 +20,8 @@ class MakeAudiobook < Formula
 
   def install
     bin.install "make-audiobook"
+    bin.install "piper-voices-setup"
     bin.install "install-dependencies"
-
-    # Install shell helper scripts
-    if (buildpath/"shell-and-scripting-helpers").exist?
-      libexec.install "shell-and-scripting-helpers"
-    end
-
-    # Install piper-voices-setup to libexec first
-    libexec.install "piper-voices-setup" => "piper-voices-setup.real"
-
-    # Create wrapper that sources helpers from correct location
-    (bin/"piper-voices-setup").write <<~EOS
-      #!/usr/bin/env bash
-      source "#{libexec}/shell-and-scripting-helpers/.qfuncs.sh"
-      exec "#{libexec}/piper-voices-setup.real" "$@"
-    EOS
-
-    # Make the wrapper executable
-    chmod 0755, bin/"piper-voices-setup"
   end
 
   def post_install

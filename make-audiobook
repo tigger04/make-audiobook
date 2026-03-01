@@ -1,12 +1,30 @@
 #!/usr/bin/env bash
-
-#shellcheck source=shell-and-scripting-helpers/.qfuncs.sh
-source "$(dirname "$0")"/shell-and-scripting-helpers/.qfuncs.sh
-#shellcheck source=shell-and-scripting-helpers/.colours.sh
-source "$(dirname "$0")"/shell-and-scripting-helpers/.colours.sh
+# ABOUTME: CLI tool to convert documents to audiobooks using Piper or Kokoro TTS.
+# ABOUTME: Supports txt, epub, docx, md, html, pdf, mobi with batch processing and ID3 tagging.
 
 set -e -o pipefail
 shopt -s dotglob lastpipe
+
+# --- Shell helpers (inlined from shell-and-scripting-helpers) ---
+cmd_base="$(basename "$0")"
+cmd_dir="$(cd "$(dirname "$0")" && pwd)"
+die()              { printf '💀 %s died: %s\n' "$cmd_base" "$*" >&2; exit 1; }
+warn()             { echo -e "⚠️ $*" >&2; }
+errortext()        { echo -e "⛔️ $*" >&2; }
+info()             { echo -e "🚹 $*" >&2; }
+checktext()        { echo "☑️ $*" >&2; }
+show_cmd_execute() { echo "⚡️ $*" >&2; "$@"; }
+hline() {
+   local cols
+   cols="${COLUMNS:-65}"
+   if [[ $# -eq 0 ]]; then
+      printf '%*s\n' "$cols" '' | tr ' ' '='
+   else
+      local text="$*" pad
+      pad=$(( (cols - ${#text} - 4) / 2 ))
+      printf '%*s> %s <%*s\n' "$pad" '' "$text" "$pad" '' | tr ' ' '-'
+   fi
+}
 
 # Array to track temporary files and directories for cleanup
 cleanup_targets=()
@@ -161,7 +179,7 @@ while [ $# -gt 0 ]; do
       fi
       ;;
    -u | --update-voices)
-      cd "$cmd_base"
+      cd "$cmd_dir"
       show_cmd_execute ./piper-voices-setup
       exit $?
       ;;
