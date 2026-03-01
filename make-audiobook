@@ -25,6 +25,56 @@ hline() {
       printf '%*s> %s <%*s\n' "$pad" '' "$text" "$pad" '' | tr ' ' '-'
    fi
 }
+mv_bak_if() {
+   # If target exists, rename it to target.bak (or target.N.bak if .bak exists)
+   local src="${1%/}"
+   local bak_target="$src.bak"
+   local index=1
+   while [[ -e "$bak_target" ]]; do
+      bak_target="${src}.$index.bak"
+      index=$((index + 1))
+   done
+   if [[ -e "$src" ]]; then
+      warn "$src -> $bak_target"
+      mv -f -- "$src" "$bak_target"
+      REPLY="$bak_target"
+   else
+      unset REPLY
+   fi
+}
+format_commas() {
+   # Format a number with comma separators. Result in $2 (nameref) or stdout.
+   local num="$1"
+   local int dec
+   int="${num%%.*}"
+   dec="${num#*.}"
+   local result=""
+   while [[ $int =~ ^([0-9]+)([0-9]{3})$ ]]; do
+      int="${BASH_REMATCH[1]}"
+      result=",${BASH_REMATCH[2]}$result"
+   done
+   if [[ "$num" == *.* ]]; then
+      REPLY="$int$result.$dec"
+   else
+      REPLY="$int$result"
+   fi
+   if [[ -n "${2:-}" ]]; then
+      local -n ptr=$2
+      # shellcheck disable=SC2034 # nameref — assigned via caller's variable name
+      ptr="$REPLY"
+   else
+      echo "$REPLY"
+   fi
+}
+oneline() {
+   # Display each input line on the same terminal line (overwrite), dimmed
+   local _line _cols
+   while IFS= read -r _line; do
+      _cols=$((${COLUMNS:-80} - 1))
+      printf '\e[1;90m%s\e[0m\r' "${_line:0:$_cols}"
+   done
+   echo
+}
 
 # Array to track temporary files and directories for cleanup
 cleanup_targets=()
@@ -266,13 +316,41 @@ if [[ -n "$voice_model" ]] && [[ "$engine" != "kokoro" ]] && [[ ! -f "$voice_mod
    die "Voice model file not found: $voice_model"
 fi
 
-# Kokoro engine: validate dependencies
+# Kokoro engine: validate dependencies and model files
+KOKORO_MODEL_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/kokoro"
+KOKORO_MODEL="$KOKORO_MODEL_DIR/kokoro-v1.0.onnx"
+KOKORO_VOICES="$KOKORO_MODEL_DIR/voices-v1.0.bin"
+KOKORO_MODEL_URL="https://github.com/nazdridoy/kokoro-tts/releases/download/v1.0.0/kokoro-v1.0.onnx"
+KOKORO_VOICES_URL="https://github.com/nazdridoy/kokoro-tts/releases/download/v1.0.0/voices-v1.0.bin"
+
 if [[ "$engine" == "kokoro" ]]; then
    if ! command -v kokoro-tts &>/dev/null; then
-      die "kokoro-tts not found. Install: pipx install kokoro-tts"
+      die "kokoro-tts not found. Install: pipx install kokoro-tts --python python3.12"
    fi
    if ! command -v espeak-ng &>/dev/null; then
       die "espeak-ng not found. Install: brew install espeak-ng"
+   fi
+
+   # Download model files on first use
+   if [[ ! -f "$KOKORO_MODEL" ]] || [[ ! -f "$KOKORO_VOICES" ]]; then
+      info "Kokoro model files not found in $KOKORO_MODEL_DIR"
+      mkdir -p "$KOKORO_MODEL_DIR"
+      if [[ ! -f "$KOKORO_MODEL" ]]; then
+         info "Downloading kokoro-v1.0.onnx (~370 MB) ..."
+         if ! curl -fL --progress-bar -o "$KOKORO_MODEL" "$KOKORO_MODEL_URL"; then
+            rm -f -- "$KOKORO_MODEL"
+            die "Failed to download kokoro-v1.0.onnx"
+         fi
+         checktext "Downloaded kokoro-v1.0.onnx"
+      fi
+      if [[ ! -f "$KOKORO_VOICES" ]]; then
+         info "Downloading voices-v1.0.bin (~330 MB) ..."
+         if ! curl -fL --progress-bar -o "$KOKORO_VOICES" "$KOKORO_VOICES_URL"; then
+            rm -f -- "$KOKORO_VOICES"
+            die "Failed to download voices-v1.0.bin"
+         fi
+         checktext "Downloaded voices-v1.0.bin"
+      fi
    fi
 fi
 
@@ -366,10 +444,21 @@ convert_file_kokoro() {
       --voice "$kokoro_voice"
       --speed "$speed"
       --format mp3
+      --model "$KOKORO_MODEL"
+      --voices "$KOKORO_VOICES"
    )
 
    info "Running: ${cmd_args[*]}"
-   "${cmd_args[@]}"
+   if ! "${cmd_args[@]}"; then
+      errortext "kokoro-tts failed for $(basename "$input_file")"
+      return 1
+   fi
+
+   # Verify output was actually created
+   if [[ ! -f "$target_mp3" ]]; then
+      errortext "kokoro-tts produced no output: $target_mp3"
+      return 1
+   fi
 
    # Set ID3 tags if author or book title provided
    if [ -n "$author" ] || [ -n "$book_title" ]; then
@@ -395,7 +484,7 @@ convert_file_kokoro() {
       temp_tagged="$(mktemp).mp3"
       register_for_cleanup "$temp_tagged"
       show_cmd_execute ffmpeg -i "$target_mp3" "${tag_args[@]}" -c copy "$temp_tagged" | oneline 2>&1
-      mv "$temp_tagged" "$target_mp3"
+      mv -- "$temp_tagged" "$target_mp3"
    fi
 
    checktext "$target_mp3"
@@ -479,6 +568,7 @@ convert_file() {
    format_commas "$txt_bytes" txt_bytes_formatted
    format_commas "$txt_words" txt_words_formatted
 
+   # shellcheck disable=SC2154 # txt_bytes_formatted and txt_words_formatted assigned via nameref in format_commas
    info "Converted $input_text_file to plain text with $txt_lines lines, $txt_words_formatted words\n($txt_bytes_formatted bytes)"
 
    info "Converting $txt_lines of plain text to raw audio ... stand by"
