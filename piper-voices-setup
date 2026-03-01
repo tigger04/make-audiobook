@@ -11,7 +11,7 @@ errortext() { echo -e "⛔️ $*" >&2; }
 info()      { echo -e "🚹 $*" >&2; }
 checktext() { echo "☑️ $*" >&2; }
 
-VERSION="3.6.0"
+VERSION="3.7.0"
 
 if [[ "${1:-}" =~ ^--?[Vv](ersion)?$ ]]; then
    echo "piper-voices-setup $VERSION"
