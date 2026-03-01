@@ -13,7 +13,7 @@ CURRENT_VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^
 ifdef VERSION
   RELEASE_VERSION := $(VERSION)
 else
-  RELEASE_VERSION = $(shell echo "$(CURRENT_VERSION)" | awk -F. '{printf "%d.%d.0", $$1, $$2+1}')
+  RELEASE_VERSION = $(shell echo "$(CURRENT_VERSION)" | awk -F. '{printf "%d.%d.%d", $$1, $$2, $$3+1}')
 endif
 
 help:
