@@ -1,18 +1,21 @@
 # CLI Usage Guide
 
-The `make-audiobook` command-line interface provides powerful batch conversion capabilities for converting documents to audiobooks using Piper or Kokoro TTS.
+The `make-audiobook` command converts documents to audiobooks using Kokoro (recommended) or Piper TTS. Kokoro produces remarkably natural speech; Piper offers faster processing with 100+ voice options.
 
 ## Basic Usage
 
 ```bash
-# Convert a single file (interactive voice selection)
+# Kokoro engine — natural-sounding, chapter-aware (recommended)
+make-audiobook mybook.epub --engine=kokoro
+
+# Kokoro with specific voice and speed
+make-audiobook mybook.epub --engine=kokoro --voice=af_bella --speed=1.2
+
+# Piper engine — fast, interactive voice selection
 make-audiobook mybook.txt
 
-# Convert multiple files
-make-audiobook chapter1.txt chapter2.txt chapter3.txt
-
-# Convert using wildcards
-make-audiobook chapter*.md
+# Batch processing
+make-audiobook chapter*.md --engine=kokoro
 ```
 
 ## Options
@@ -71,9 +74,9 @@ make-audiobook mybook.txt -s=1.0
 make-audiobook mybook.txt
 ```
 
-### Kokoro Engine
+### Kokoro Engine (Recommended)
 
-Use the Kokoro engine for higher quality output with native epub/pdf chapter support:
+Kokoro produces the most natural-sounding speech available in open-source TTS. It natively handles epub and pdf with chapter detection, and outputs MP3 directly without intermediate conversion steps.
 
 ```bash
 # Convert with Kokoro (uses default voice af_heart)
@@ -85,11 +88,11 @@ make-audiobook mybook.epub --engine=kokoro --voice=af_bella
 # Adjust Kokoro speed (1.0 = normal, higher = faster)
 make-audiobook mybook.epub --engine=kokoro --speed=1.2
 
-# Kokoro handles epub and pdf natively (chapter-aware)
+# Chapter-aware pdf conversion
 make-audiobook mybook.pdf --engine=kokoro --voice=bm_lewis
 ```
 
-Kokoro has 26 built-in voices (no download needed). Requires `kokoro-tts` and `espeak-ng` — see [Installation Guide](installation.md#optional-kokoro-tts-engine).
+Kokoro has 26 built-in voices. Model files (~700 MB) are downloaded automatically on first use. Requires `kokoro-tts` and `espeak-ng` — see [Installation Guide](installation.md#kokoro-tts-engine-recommended).
 
 ### Batch Processing
 

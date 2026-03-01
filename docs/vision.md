@@ -17,15 +17,15 @@ Audiobook creation is typically:
 make-audiobook provides a simple, local pipeline:
 
 ```
-Piper engine:
+Kokoro engine (recommended):
+  Document (epub, pdf, txt) → MP3 directly (Kokoro TTS, chapter-aware)
+  Document (docx, md, html, mobi) → Plain text (pandoc) → MP3 (Kokoro TTS)
+
+Piper engine (alternative — faster, more voice variety):
   Document (epub, docx, txt, md, html, pdf, mobi)
       → Plain text (pandoc)
       → Speech audio (Piper TTS)
       → MP3 with metadata (ffmpeg)
-
-Kokoro engine:
-  Document (epub, pdf, txt) → MP3 directly (Kokoro TTS, chapter-aware)
-  Document (docx, md, html, mobi) → Plain text (pandoc) → MP3 (Kokoro TTS)
 ```
 
 All processing happens locally using open-source tools. Users own their output.
@@ -37,8 +37,8 @@ All processing runs on your machine. No internet required after initial voice do
 
 ### 2. Open Source
 Built entirely on FOSS:
-- Piper TTS (MIT) - neural text-to-speech
-- Kokoro TTS (Apache-2.0) - high-quality neural TTS (optional)
+- Kokoro TTS (Apache-2.0) - natural-sounding neural TTS (recommended)
+- Piper TTS (MIT) - fast neural TTS with extensive voice library
 - Pandoc (GPL) - universal document converter
 - FFmpeg (LGPL) - audio encoding
 - PySide6 (LGPL) - GUI framework
@@ -50,7 +50,7 @@ make-audiobook mybook.epub
 ```
 
 ### 4. Quality
-Piper voices rival commercial TTS. Medium quality is production-ready; high quality is exceptional. Kokoro offers even higher fidelity with chapter-aware conversion for epub and pdf. Users choose their trade-off between speed and fidelity.
+Kokoro produces remarkably natural speech — closer to a human narrator than any other open-source TTS available. It is the recommended engine for audiobook conversion, with chapter-aware processing for epub and pdf. Piper offers a faster alternative with 100+ downloadable voices when speed or voice variety is preferred over naturalness.
 
 ### 5. Accessibility
 The GUI removes technical barriers. Non-technical users can:

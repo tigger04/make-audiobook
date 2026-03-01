@@ -75,9 +75,9 @@ Supported formats: `.txt`, `.epub`, `.docx`, `.md`, `.html`, `.pdf`, `.mobi`
 ### Engine and Voice Settings
 
 **TTS Engine**
-- Select from three engines in the Engine dropdown:
-  - **Piper** (default) — fast neural TTS with 100+ downloadable voices
-  - **Kokoro** — high-quality 82M parameter TTS with 26 built-in voices and native epub/pdf chapter support
+- Select from the Engine dropdown:
+  - **Kokoro** (recommended) — natural-sounding TTS with 26 built-in voices and chapter-aware epub/pdf support
+  - **Piper** — faster processing with 100+ downloadable voices
   - **WhisperSpeech** (experimental) — research-grade TTS
 - Changing the engine updates the voice list automatically
 

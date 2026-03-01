@@ -1,8 +1,14 @@
 # make-audiobook
 
-Convert ebooks and documents into audiobooks using Piper or Kokoro TTS — locally, privately, and free.
+Convert ebooks and documents into natural-sounding audiobooks — locally, privately, and free.
 
 **[Installation](./docs/installation.md)** | **[CLI Guide](./docs/cli-usage.md)** | **[GUI Guide](./docs/gui-usage.md)** | **[Vision](./docs/vision.md)**
+
+## Why make-audiobook?
+
+The **Kokoro TTS** engine produces remarkably natural speech — closer to a human narrator than any other open-source TTS we've tested. Combined with chapter-aware processing for epub and pdf, it turns your ebooks into genuinely listenable audiobooks in minutes, entirely on your own machine.
+
+A lighter-weight **Piper** engine is also included for faster batch processing with 100+ downloadable voices.
 
 ## Important
 
@@ -10,11 +16,12 @@ Input files must be **DRM-free**. This tool cannot process DRM-protected ebooks 
 
 ## Features
 
+- **Remarkably natural speech** — Kokoro TTS produces near-human narration quality
 - **Local processing** — no cloud services, no data leaves your machine
+- **Chapter-aware** — Kokoro natively detects chapters in epub and pdf
 - **GUI and CLI** interfaces
-- **Multiple TTS engines**: Piper (fast, 100+ voices) and Kokoro (high quality, 26 voices)
+- **Two TTS engines**: Kokoro (recommended, 26 natural voices) and Piper (fast, 100+ voices)
 - Converts epub, docx, txt, md, html, pdf, mobi to MP3
-- **Chapter-aware** conversion with Kokoro for epub/pdf
 - **Batch processing** multiple files
 - **ID3 metadata** tagging (author, title, track numbers)
 - **Voice browser** to download from 100+ Piper voices
@@ -58,23 +65,17 @@ make gui
 ### CLI
 
 ```bash
-# Convert with interactive voice selection
-make-audiobook mybook.epub
-
-# Random voice
-make-audiobook mybook.epub --random-voice
-
-# Batch processing with high-quality voices
-make-audiobook chapter*.txt --random=high
-
-# Adjust speed (higher = slower, default 1.5)
-make-audiobook mybook.epub --length_scale=2.0
-
-# Use Kokoro engine (higher quality, chapter-aware)
+# Kokoro engine (recommended — natural-sounding, chapter-aware)
 make-audiobook mybook.epub --engine=kokoro
 
 # Kokoro with specific voice and speed
-make-audiobook mybook.epub --engine=kokoro --voice=af_heart --speed=1.5
+make-audiobook mybook.epub --engine=kokoro --voice=af_bella --speed=1.2
+
+# Piper engine (fast, 100+ voices, interactive selection)
+make-audiobook mybook.epub
+
+# Batch processing with random high-quality Piper voices
+make-audiobook chapter*.txt --random=high
 ```
 
 [Full CLI Guide](./docs/cli-usage.md)
@@ -93,9 +94,9 @@ make-audiobook mybook.epub --engine=kokoro --voice=af_heart --speed=1.5
 
 ## Dependencies
 
-- [Piper TTS](https://github.com/rhasspy/piper) — neural text-to-speech (default engine)
-- [Kokoro TTS](https://github.com/nazdridoy/kokoro-tts) — high-quality TTS with native epub/pdf support (optional)
-- [espeak-ng](https://github.com/espeak-ng/espeak-ng) — required by Kokoro (optional)
+- [Kokoro TTS](https://github.com/nazdridoy/kokoro-tts) — natural-sounding TTS with chapter-aware epub/pdf support (recommended)
+- [espeak-ng](https://github.com/espeak-ng/espeak-ng) — phoneme backend for Kokoro
+- [Piper TTS](https://github.com/rhasspy/piper) — fast neural TTS with 100+ voices (alternative engine)
 - [FFmpeg](https://ffmpeg.org/) — audio encoding
 - [Pandoc](https://pandoc.org/) — document conversion
 - [PySide6](https://doc.qt.io/qtforpython-6/) — GUI framework (LGPL)

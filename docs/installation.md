@@ -183,15 +183,15 @@ Download the installer from the [releases page](https://github.com/tigger04/make
 
 ---
 
-## Optional: Kokoro TTS Engine
+## Kokoro TTS Engine (Recommended)
 
-Kokoro is a high-quality TTS engine with native epub/pdf chapter support and 26 built-in voices. It is optional — Piper is the default engine.
+Kokoro produces the most natural-sounding speech of any open-source TTS engine. It supports 26 built-in voices and natively handles epub/pdf with chapter detection. Model files (~700 MB total) are downloaded automatically on first use.
 
 ### macOS
 
 ```bash
-brew install espeak
-pipx install kokoro-tts
+brew install espeak-ng
+pipx install kokoro-tts --python python3.12
 ```
 
 ### Linux
