@@ -66,15 +66,6 @@ format_commas() {
       echo "$REPLY"
    fi
 }
-oneline() {
-   # Display each input line on the same terminal line (overwrite), dimmed
-   local _line _cols
-   while IFS= read -r _line; do
-      _cols=$((${COLUMNS:-80} - 1))
-      printf '\e[1;90m%s\e[0m\r' "${_line:0:$_cols}"
-   done
-   echo
-}
 
 # Array to track temporary files and directories for cleanup
 cleanup_targets=()
@@ -483,7 +474,7 @@ convert_file_kokoro() {
       local temp_tagged
       temp_tagged="$(mktemp).mp3"
       register_for_cleanup "$temp_tagged"
-      show_cmd_execute ffmpeg -i "$target_mp3" "${tag_args[@]}" -c copy "$temp_tagged" | oneline 2>&1
+      show_cmd_execute ffmpeg -i "$target_mp3" "${tag_args[@]}" -c copy "$temp_tagged" 2>&1
       mv -- "$temp_tagged" "$target_mp3"
    fi
 
@@ -576,7 +567,7 @@ convert_file() {
       --output-file "$wav"
 
    info "Now converting raw WAV audio to MP3"
-   show_cmd_execute ffmpeg -i "$wav" "$target_mp3" | oneline 2>&1
+   show_cmd_execute ffmpeg -i "$wav" "$target_mp3" 2>&1
 
    info "Tidying up ..."
    rm -f "$txt" "$wav"
@@ -608,7 +599,7 @@ convert_file() {
       # Create a temporary file for retagging
       temp_tagged="$(mktemp).mp3"
       register_for_cleanup "$temp_tagged"
-      show_cmd_execute ffmpeg -i "$target_mp3" "${tag_args[@]}" -c copy "$temp_tagged" | oneline 2>&1
+      show_cmd_execute ffmpeg -i "$target_mp3" "${tag_args[@]}" -c copy "$temp_tagged" 2>&1
       mv "$temp_tagged" "$target_mp3"
    fi
 
