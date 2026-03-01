@@ -8,7 +8,7 @@ Convert ebooks and documents into audiobooks using open-source TTS — locally, 
 
 make-audiobook handles the full pipeline from document to audiobook: format conversion, text extraction, text-to-speech, audio encoding, and ID3 metadata tagging. Drop in an epub, get back an MP3 — via GUI or CLI.
 
-It supports multiple TTS engines. The recommended default is now **Kokoro**, which produces remarkably natural speech — closer to a human narrator than any other open-source TTS we've tested. A faster **Piper** engine is also available with 100+ downloadable voices.
+It supports multiple TTS engines. The recommended default is now **Kokoro**, which produces remarkably natural speech — closer to a human narrator than any other open-source TTS I've tested. A faster **Piper** engine is also available with 100+ downloadable voices.
 
 ## Important
 
