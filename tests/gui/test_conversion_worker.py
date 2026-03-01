@@ -423,3 +423,105 @@ class TestKokoroConversionWorker:
         assert "--engine=" not in cmd_str
         # Should have length_scale
         assert "--length_scale=1.5" in cmd_str
+
+
+class TestLogNoiseFiltering:
+    """Tests for GUI log noise filtering in ConversionWorker."""
+
+    @pytest.fixture
+    def kokoro_worker(self, tmp_path, qapp):
+        """Kokoro worker with log signal connected."""
+        test_file = tmp_path / "book.epub"
+        test_file.write_text("content")
+        job = ConversionJob(
+            files=[test_file],
+            voice_key="af_heart",
+            engine="kokoro",
+        )
+        return ConversionWorker(job=job)
+
+    def test_spinner_frames_suppressed_from_log(self, kokoro_worker):
+        """Kokoro spinner frames should not appear in log output."""
+        log_messages = []
+        kokoro_worker.log.connect(lambda msg: log_messages.append(msg))
+
+        kokoro_worker._handle_stdout("Processing chunk 1/3 \u280b")
+        kokoro_worker._handle_stdout("Processing chunk 1/3 \u2819")
+        kokoro_worker._handle_stdout("Processing chunk 1/3 \u2839")
+
+        # Should emit at most one summary line, not three individual frames
+        assert len(log_messages) <= 1
+        if log_messages:
+            assert "Processing chunk 1/3" in log_messages[0]
+
+    def test_chunk_transition_logged_once(self, kokoro_worker):
+        """Chunk transitions should produce one summary log line each."""
+        log_messages = []
+        kokoro_worker.log.connect(lambda msg: log_messages.append(msg))
+
+        # Many spinner frames for chunk 1
+        for spinner in "\u280b\u2819\u2839\u2838\u283c\u2834\u2826\u2827\u2807\u280f":
+            kokoro_worker._handle_stdout(f"Processing chunk 1/3 {spinner}")
+        # Transition to chunk 2
+        for spinner in "\u280b\u2819\u2839":
+            kokoro_worker._handle_stdout(f"Processing chunk 2/3 {spinner}")
+
+        # Should see exactly 2 summary lines (one per chunk transition)
+        assert len(log_messages) == 2
+        assert "1/3" in log_messages[0]
+        assert "2/3" in log_messages[1]
+
+    def test_curl_progress_bars_suppressed(self, kokoro_worker):
+        """curl download progress bars should not appear in log."""
+        log_messages = []
+        kokoro_worker.log.connect(lambda msg: log_messages.append(msg))
+
+        kokoro_worker._handle_stderr("##O#-#")
+        kokoro_worker._handle_stderr("####                  42.7%")
+        kokoro_worker._handle_stderr("  0.6%")
+        kokoro_worker._handle_stderr("############ 100.0%")
+
+        assert len(log_messages) == 0
+
+    def test_pymupdf_advisory_suppressed(self, kokoro_worker):
+        """pymupdf package advisory should not appear in log."""
+        log_messages = []
+        kokoro_worker.log.connect(lambda msg: log_messages.append(msg))
+
+        kokoro_worker._handle_stdout(
+            "Consider using the pymupdf_layout package for a greatly improved page layout analysis."
+        )
+
+        assert len(log_messages) == 0
+
+    def test_meaningful_messages_not_suppressed(self, kokoro_worker):
+        """Important messages should still appear in log."""
+        log_messages = []
+        kokoro_worker.log.connect(lambda msg: log_messages.append(msg))
+
+        meaningful_lines = [
+            "Processing: Chapter 1",
+            "Completed Chapter 1: 3/3 chunks processed",
+            "\u2611\ufe0f Downloaded kokoro-v1.0.onnx",
+            "\U0001f6b9 Downloading kokoro-v1.0.onnx (~370 MB) ...",
+            "\u26d4\ufe0f kokoro-tts failed for test.epub",
+            "Error: something went wrong",
+        ]
+        for line in meaningful_lines:
+            kokoro_worker._handle_stderr(line)
+
+        assert len(log_messages) == len(meaningful_lines)
+
+    def test_progress_still_parsed_from_suppressed_lines(self, kokoro_worker):
+        """Progress bar should still update even when log lines are suppressed."""
+        kokoro_worker._current_file = kokoro_worker._job.files[0]
+
+        progress_updates = []
+        kokoro_worker.progress.connect(lambda f, p: progress_updates.append((f, p)))
+
+        # Spinner frames are suppressed from log but should still drive progress
+        kokoro_worker._handle_stdout("Processing chunk 2/3 \u280b")
+
+        assert len(progress_updates) >= 1
+        _, percent = progress_updates[-1]
+        assert percent == 66  # 2/3 = 66%

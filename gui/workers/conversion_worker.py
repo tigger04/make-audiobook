@@ -18,6 +18,19 @@ from gui.utils.paths import get_script_path, get_expanded_path, VOICES_DIR
 logger = logging.getLogger(__name__)
 
 
+# Lines matching these patterns are progress noise — parsed for the progress
+# bar but suppressed from the log panel to keep it readable.
+_NOISE_PATTERNS = [
+    # Kokoro spinner frames: "Processing chunk 1/3 ⠋" (braille U+2800..U+28FF)
+    re.compile(r"^Processing chunk \d+/\d+\s+[\u2800-\u28FF]"),
+    # curl progress bars: "####  42.7%" or "##O#-#" or bare percentages
+    re.compile(r"^[#=O\-\s]+\d*\.?\d*%?\s*$"),
+    re.compile(r"^\s*\d+\.\d+%\s*$"),
+    # pymupdf advisory (not an error, just noise)
+    re.compile(r"^Consider using the pymupdf_layout package"),
+]
+
+
 class ConversionWorker(QObject):
     """Worker for running make-audiobook conversions.
 
@@ -55,6 +68,7 @@ class ConversionWorker(QObject):
         # Kokoro-specific progress tracking
         self._kokoro_total_chapters = 0
         self._kokoro_completed_chapters = 0
+        self._last_logged_chunk: Optional[str] = None
 
     def start(self) -> None:
         """Start the conversion process.
@@ -202,6 +216,33 @@ class ConversionWorker(QObject):
             if line.strip():
                 self._handle_stderr(line)
 
+    def _is_noise(self, line: str) -> bool:
+        """Check whether a line is progress noise that should not appear in the log."""
+        return any(p.search(line) for p in _NOISE_PATTERNS)
+
+    def _log_if_meaningful(self, line: str) -> None:
+        """Emit line to log only if it carries meaningful information.
+
+        Suppresses spinner frames and progress bars.  On chunk transitions
+        (e.g. 1/3 -> 2/3) emits a single summary line instead of hundreds
+        of spinner updates.
+        """
+        if self._is_noise(line):
+            # Still check for chunk transitions to log a summary
+            chunk_match = re.search(r"Processing chunk (\d+/\d+)", line)
+            if chunk_match:
+                chunk_id = chunk_match.group(1)
+                if chunk_id != self._last_logged_chunk:
+                    self._last_logged_chunk = chunk_id
+                    self.log.emit(f"Processing chunk {chunk_id} ...")
+            return
+        self.log.emit(line)
+
+    def _handle_line(self, line: str) -> None:
+        """Process a single line: filter log noise, then parse for progress."""
+        self._log_if_meaningful(line)
+        self._parse_progress_output(line)
+
     def _handle_stdout(self, line: str) -> None:
         """Process a line of stdout output.
 
@@ -214,16 +255,13 @@ class ConversionWorker(QObject):
             for segment in segments:
                 stripped = segment.strip()
                 if stripped:
-                    self.log.emit(stripped)
-                    self._parse_progress_output(stripped)
+                    self._handle_line(stripped)
         else:
-            self.log.emit(line)
-            self._parse_progress_output(line)
+            self._handle_line(line)
 
     def _handle_stderr(self, line: str) -> None:
         """Process a line of stderr output."""
-        self.log.emit(line)
-        self._parse_progress_output(line)
+        self._handle_line(line)
 
     def _parse_progress_output(self, line: str) -> None:
         """Parse progress from subprocess output.
@@ -268,8 +306,8 @@ class ConversionWorker(QObject):
         - Chapter done: Completed Chapter Title: N/M chunks processed
         - Total chapters: Total Chapters: N
         """
-        # Parse chunk progress: (N/M) pattern
-        chunk_match = re.search(r"\((\d+)/(\d+)\)", line)
+        # Parse chunk progress: "(N/M)" or "Processing chunk N/M"
+        chunk_match = re.search(r"(?:chunk\s+|\()(\d+)/(\d+)\)?", line)
         if chunk_match:
             current_chunk = int(chunk_match.group(1))
             total_chunks = int(chunk_match.group(2))
