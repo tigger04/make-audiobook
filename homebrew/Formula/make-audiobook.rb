@@ -11,7 +11,7 @@ class MakeAudiobook < Formula
 
   depends_on "bash" => "5.0"
   depends_on "calibre" => :recommended  # for .mobi file support
-  depends_on "espeak" => :optional      # for Kokoro TTS engine
+  depends_on "espeak"                    # required by Kokoro TTS engine
   depends_on "ffmpeg"
   depends_on "pandoc"
   depends_on "fzf"
@@ -27,7 +27,8 @@ class MakeAudiobook < Formula
   def post_install
     ohai "Installing piper-tts via pipx..."
     system "pipx", "install", "piper-tts"
-
+    ohai "Installing kokoro-tts via pipx..."
+    system "pipx", "install", "kokoro-tts"
     ohai "To install default voices, run: piper-voices-setup"
   end
 
