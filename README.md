@@ -1,14 +1,14 @@
 # make-audiobook
 
-Convert ebooks and documents into natural-sounding audiobooks — locally, privately, and free.
+Convert ebooks and documents into audiobooks using open-source TTS — locally, privately, and free.
 
 **[Installation](./docs/installation.md)** | **[CLI Guide](./docs/cli-usage.md)** | **[GUI Guide](./docs/gui-usage.md)** | **[Vision](./docs/vision.md)**
 
-## Why make-audiobook?
+## What it does
 
-The **Kokoro TTS** engine produces remarkably natural speech — closer to a human narrator than any other open-source TTS we've tested. Combined with chapter-aware processing for epub and pdf, it turns your ebooks into genuinely listenable audiobooks in minutes, entirely on your own machine.
+make-audiobook handles the full pipeline from document to audiobook: format conversion, text extraction, text-to-speech, audio encoding, and ID3 metadata tagging. Drop in an epub, get back an MP3 — via GUI or CLI.
 
-A lighter-weight **Piper** engine is also included for faster batch processing with 100+ downloadable voices.
+It supports multiple TTS engines. The recommended default is now **Kokoro**, which produces remarkably natural speech — closer to a human narrator than any other open-source TTS we've tested. A faster **Piper** engine is also available with 100+ downloadable voices.
 
 ## Important
 
@@ -16,12 +16,12 @@ Input files must be **DRM-free**. This tool cannot process DRM-protected ebooks 
 
 ## Features
 
-- **Remarkably natural speech** — Kokoro TTS produces near-human narration quality
+- **Full document-to-audiobook pipeline** — handles format conversion, text extraction, TTS, encoding, and tagging
 - **Local processing** — no cloud services, no data leaves your machine
-- **Chapter-aware** — Kokoro natively detects chapters in epub and pdf
 - **GUI and CLI** interfaces
-- **Two TTS engines**: Kokoro (recommended, 26 natural voices) and Piper (fast, 100+ voices)
+- **Multiple TTS engines**: Kokoro (recommended — natural speech, chapter-aware) and Piper (fast, 100+ voices)
 - Converts epub, docx, txt, md, html, pdf, mobi to MP3
+- **Chapter-aware** conversion for epub and pdf (Kokoro)
 - **Batch processing** multiple files
 - **ID3 metadata** tagging (author, title, track numbers)
 - **Voice browser** to download from 100+ Piper voices
