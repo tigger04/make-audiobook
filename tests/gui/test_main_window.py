@@ -150,6 +150,105 @@ class TestMainWindowMenu:
         window.close()
 
 
+class TestMainWindowMetadataPopulation:
+    """Tests for ebook metadata auto-population in MainWindow."""
+
+    def _make_epub(self, path, *, author="", title=""):
+        """Create a minimal epub file for testing."""
+        import io
+        import zipfile
+
+        opf_metadata = ""
+        if title:
+            opf_metadata += f"    <dc:title>{title}</dc:title>\n"
+        if author:
+            opf_metadata += f"    <dc:creator>{author}</dc:creator>\n"
+
+        opf_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+{opf_metadata}  </metadata>
+</package>"""
+
+        container_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">
+  <rootfiles>
+    <rootfile full-path="content.opf"
+              media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>"""
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("mimetype", "application/epub+zip")
+            zf.writestr("META-INF/container.xml", container_xml)
+            zf.writestr("content.opf", opf_content)
+        path.write_bytes(buf.getvalue())
+        return path
+
+    def test_epub_metadata_populates_author_and_title(self, qapp, tmp_path):
+        """Adding an epub should pre-populate author and title fields."""
+        window = MainWindow()
+        epub = self._make_epub(
+            tmp_path / "book.epub",
+            author="Jane Austen",
+            title="Pride and Prejudice",
+        )
+
+        window._file_list.add_file(epub)
+
+        assert window._settings_panel.get_author() == "Jane Austen"
+        assert window._settings_panel.get_title() == "Pride and Prejudice"
+        window.close()
+
+    def test_txt_file_does_not_populate_metadata(self, qapp, tmp_path):
+        """Adding a txt file should not change metadata fields."""
+        window = MainWindow()
+        txt = tmp_path / "test.txt"
+        txt.write_text("content")
+
+        window._file_list.add_file(txt)
+
+        assert window._settings_panel.get_author() == ""
+        assert window._settings_panel.get_title() == ""
+        window.close()
+
+    def test_metadata_does_not_overwrite_user_input(self, qapp, tmp_path):
+        """Metadata extraction should not overwrite user-entered values."""
+        window = MainWindow()
+        window._settings_panel._author_field.setText("Custom Author")
+        window._settings_panel._title_field.setText("Custom Title")
+
+        epub = self._make_epub(
+            tmp_path / "book.epub",
+            author="Epub Author",
+            title="Epub Title",
+        )
+        window._file_list.add_file(epub)
+
+        assert window._settings_panel.get_author() == "Custom Author"
+        assert window._settings_panel.get_title() == "Custom Title"
+        window.close()
+
+    def test_first_ebook_metadata_used_for_multiple_files(self, qapp, tmp_path):
+        """When multiple files added, metadata from first ebook is used."""
+        window = MainWindow()
+        txt = tmp_path / "intro.txt"
+        txt.write_text("intro")
+        epub = self._make_epub(
+            tmp_path / "book.epub",
+            author="First Author",
+            title="First Book",
+        )
+
+        window._file_list.add_file(txt)
+        window._file_list.add_file(epub)
+
+        assert window._settings_panel.get_author() == "First Author"
+        assert window._settings_panel.get_title() == "First Book"
+        window.close()
+
+
 class TestMainWindowConfiguration:
     """Tests for MainWindow configuration persistence."""
 

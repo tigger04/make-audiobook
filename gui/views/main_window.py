@@ -35,6 +35,7 @@ from gui.views.voice_manager import VoiceManagerWidget
 from gui.views.voice_browser import VoiceBrowserDialog
 from gui.workers.catalog_worker import CatalogWorker
 from gui.workers.conversion_worker import ConversionWorker
+from gui.utils.metadata import extract_metadata
 from gui.workers.download_worker import DownloadWorker
 
 logger = logging.getLogger(__name__)
@@ -229,9 +230,28 @@ class MainWindow(QMainWindow):
         return voices
 
     def _on_files_changed(self) -> None:
-        """Handle file list changes."""
+        """Handle file list changes.
+
+        Enables the Convert button and pre-populates metadata from the
+        first ebook file in the list (if the fields are currently empty).
+        """
         has_files = self._file_list.file_count() > 0
         self._convert_button.setEnabled(has_files)
+
+        if has_files:
+            self._populate_metadata_from_files()
+
+    def _populate_metadata_from_files(self) -> None:
+        """Extract and pre-populate metadata from the first ebook in the file list.
+
+        Only populates empty fields — does not overwrite user input.
+        """
+        for file_path in self._file_list.get_files():
+            meta = extract_metadata(file_path)
+            if meta["author"] or meta["title"]:
+                self._settings_panel.set_author(meta["author"])
+                self._settings_panel.set_title(meta["title"])
+                break
 
     def _on_convert_clicked(self) -> None:
         """Handle Convert button click."""

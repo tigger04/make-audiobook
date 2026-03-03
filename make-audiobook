@@ -203,6 +203,8 @@ length_scale=1.5
 non_interactive=false
 author=""
 book_title=""
+author_explicit=false
+title_explicit=false
 voice_model=""
 engine="piper"
 speed="1.0"
@@ -248,6 +250,7 @@ while [ $# -gt 0 ]; do
    --author*)
       if [[ "$1" == *=* ]]; then
          author="${1#*=}"
+         author_explicit=true
       else
          die "Author option requires a value, e.g. --author=\"John Doe\""
       fi
@@ -255,6 +258,7 @@ while [ $# -gt 0 ]; do
    --title*)
       if [[ "$1" == *=* ]]; then
          book_title="${1#*=}"
+         title_explicit=true
       else
          die "Title option requires a value, e.g. --title=\"My Book\""
       fi
@@ -345,13 +349,101 @@ if [[ "$engine" == "kokoro" ]]; then
    fi
 fi
 
+# Extract metadata from first ebook file (epub/mobi) if --author/--title not given
+extract_ebook_metadata() {
+   local file="$1"
+   local ext="${file##*.}"
+   # Convert extension to lowercase (bash 3.2 compatible)
+   ext="$(echo "$ext" | tr '[:upper:]' '[:lower:]')"
+
+   case "$ext" in
+      epub)
+         python3 -c "
+import zipfile, xml.etree.ElementTree as ET, sys
+try:
+    with zipfile.ZipFile(sys.argv[1]) as zf:
+        c = ET.fromstring(zf.read('META-INF/container.xml'))
+        ns = {'c': 'urn:oasis:names:tc:opendocument:xmlns:container'}
+        rf = c.find('.//c:rootfile[@media-type=\"application/oebps-package+xml\"]', ns)
+        opf = ET.fromstring(zf.read(rf.get('full-path')))
+        dc = 'http://purl.org/dc/elements/1.1/'
+        cr = opf.find('.//{%s}creator' % dc)
+        ti = opf.find('.//{%s}title' % dc)
+        print(cr.text.strip() if cr is not None and cr.text else '')
+        print(ti.text.strip() if ti is not None and ti.text else '')
+except Exception:
+    print(''); print('')
+" "$file"
+         ;;
+      mobi)
+         if command -v ebook-meta &>/dev/null; then
+            local output
+            output="$(ebook-meta "$file" 2>/dev/null)" || { echo ""; echo ""; return; }
+            local meta_author="" meta_title=""
+            while IFS= read -r line; do
+               if [[ "$line" == Title* ]]; then
+                  meta_title="${line#*: }"
+               elif [[ "$line" == Author* ]]; then
+                  meta_author="${line#*: }"
+                  # Strip "[sort key]" suffix from ebook-meta output
+                  meta_author="${meta_author%%\[*}"
+                  meta_author="${meta_author%"${meta_author##*[![:space:]]}"}"
+               fi
+            done <<< "$output"
+            echo "$meta_author"
+            echo "$meta_title"
+         else
+            echo ""; echo ""
+         fi
+         ;;
+      *)
+         echo ""; echo ""
+         ;;
+   esac
+}
+
+# Auto-populate metadata from the first ebook in the file list
+for src_file in "${source_files[@]}"; do
+   ext="${src_file##*.}"
+   ext="$(echo "$ext" | tr '[:upper:]' '[:lower:]')"
+   if [[ "$ext" == "epub" ]] || [[ "$ext" == "mobi" ]]; then
+      {
+         read -r extracted_author
+         read -r extracted_title
+      } < <(extract_ebook_metadata "$src_file")
+      if ! $author_explicit && [[ -n "$extracted_author" ]]; then
+         author="$extracted_author"
+         info "Extracted author from $(basename "$src_file"): $author"
+      fi
+      if ! $title_explicit && [[ -n "$extracted_title" ]]; then
+         book_title="$extracted_title"
+         info "Extracted title from $(basename "$src_file"): $book_title"
+      fi
+      break
+   fi
+done
+
 if ! $non_interactive; then
    info "The following metadata will be applied to all ${#source_files[@]} files specified, if entered."
-   # Prompt for author and book (optional)
-   echo -n "Enter author name (optional): "
-   read -r author
-   echo -n "Enter book title (optional): "
-   read -r book_title
+   # Prompt for author and book title (pre-filled with extracted metadata)
+   if [[ -n "$author" ]]; then
+      echo -n "Enter author name [$author]: "
+   else
+      echo -n "Enter author name (optional): "
+   fi
+   read -r input_author
+   if [[ -n "$input_author" ]]; then
+      author="$input_author"
+   fi
+   if [[ -n "$book_title" ]]; then
+      echo -n "Enter book title [$book_title]: "
+   else
+      echo -n "Enter book title (optional): "
+   fi
+   read -r input_title
+   if [[ -n "$input_title" ]]; then
+      book_title="$input_title"
+   fi
 fi
 
 # Function to extract track number from filename

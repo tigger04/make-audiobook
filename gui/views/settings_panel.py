@@ -307,9 +307,31 @@ class SettingsPanel(QWidget):
         """Get the author field value (trimmed)."""
         return self._author_field.text().strip()
 
+    def set_author(self, author: str) -> None:
+        """Set the author field, but only if currently empty.
+
+        Will not overwrite text the user has already entered.
+
+        Args:
+            author: Author name to populate.
+        """
+        if not self._author_field.text().strip():
+            self._author_field.setText(author)
+
     def get_title(self) -> str:
         """Get the title field value (trimmed)."""
         return self._title_field.text().strip()
+
+    def set_title(self, title: str) -> None:
+        """Set the title field, but only if currently empty.
+
+        Will not overwrite text the user has already entered.
+
+        Args:
+            title: Book title to populate.
+        """
+        if not self._title_field.text().strip():
+            self._title_field.setText(title)
 
     def get_selected_engine(self) -> str:
         """Get the selected TTS engine name."""

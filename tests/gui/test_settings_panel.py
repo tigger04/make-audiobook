@@ -218,3 +218,41 @@ class TestSettingsPanelValidation:
         """Test whitespace is trimmed from title."""
         panel._title_field.setText("  My Book  ")
         assert panel.get_title() == "My Book"
+
+
+class TestSettingsPanelMetadataSetters:
+    """Tests for programmatic metadata field population."""
+
+    def test_set_author(self, panel):
+        """Test set_author() populates the author field."""
+        panel.set_author("George Orwell")
+        assert panel.get_author() == "George Orwell"
+
+    def test_set_title(self, panel):
+        """Test set_title() populates the title field."""
+        panel.set_title("1984")
+        assert panel.get_title() == "1984"
+
+    def test_set_author_does_not_overwrite_user_input(self, panel):
+        """set_author() should not overwrite if user already typed something."""
+        panel._author_field.setText("My Custom Author")
+        panel.set_author("Extracted Author")
+        assert panel.get_author() == "My Custom Author"
+
+    def test_set_title_does_not_overwrite_user_input(self, panel):
+        """set_title() should not overwrite if user already typed something."""
+        panel._title_field.setText("My Custom Title")
+        panel.set_title("Extracted Title")
+        assert panel.get_title() == "My Custom Title"
+
+    def test_set_author_populates_when_empty(self, panel):
+        """set_author() should populate when field is empty."""
+        panel._author_field.clear()
+        panel.set_author("New Author")
+        assert panel.get_author() == "New Author"
+
+    def test_set_title_populates_when_empty(self, panel):
+        """set_title() should populate when field is empty."""
+        panel._title_field.clear()
+        panel.set_title("New Title")
+        assert panel.get_title() == "New Title"
