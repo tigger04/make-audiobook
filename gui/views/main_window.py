@@ -319,7 +319,6 @@ class MainWindow(QMainWindow):
 
         if success:
             self._progress_panel.set_status("Conversion complete!")
-            self._progress_panel.set_overall_progress(100)
         else:
             error_detail = getattr(self, "_last_conversion_error", "")
             self._last_conversion_error = ""

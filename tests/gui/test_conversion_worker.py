@@ -423,6 +423,107 @@ class TestKokoroConversionWorker:
         assert "--length_scale=1.5" in cmd_str
 
 
+class TestOverallProgressBlending:
+    """Tests for blended overall progress in ConversionWorker."""
+
+    def test_single_file_kokoro_forwards_chunk_progress_to_overall(self, qapp, tmp_path):
+        """Single-file Kokoro: chunk progress should drive overall bar."""
+        test_file = tmp_path / "book.epub"
+        test_file.write_text("content")
+        job = ConversionJob(files=[test_file], voice_key="af_heart", engine="kokoro")
+        worker = ConversionWorker(job=job)
+        worker._current_file = test_file
+
+        overall_updates = []
+        worker.overall_progress.connect(lambda p: overall_updates.append(p))
+
+        worker._parse_progress_output("Processing chunk 3/10 \u280b")
+
+        assert len(overall_updates) >= 1
+        assert overall_updates[-1] == 30  # 3/10 = 30%
+
+    def test_single_file_piper_forwards_file_progress_to_overall(self, qapp, tmp_path):
+        """Single-file Piper: pv progress should drive overall bar."""
+        test_file = tmp_path / "book.txt"
+        test_file.write_text("content")
+        job = ConversionJob(files=[test_file], voice_key="en_US-ryan-high", engine="piper")
+        worker = ConversionWorker(job=job)
+        worker._current_file = test_file
+
+        overall_updates = []
+        worker.overall_progress.connect(lambda p: overall_updates.append(p))
+
+        worker._parse_progress_output("1.5MiB 0:00:05 [300KiB/s]")
+
+        assert len(overall_updates) >= 1
+        assert overall_updates[-1] > 0
+
+    def test_multi_file_blends_file_progress_into_overall(self, qapp, tmp_path):
+        """Multi-file: overall should blend completed files + current file fraction."""
+        files = []
+        for i in range(4):
+            f = tmp_path / f"ch{i}.txt"
+            f.write_text(f"Chapter {i}")
+            files.append(f)
+
+        job = ConversionJob(files=files, voice_key="en_US-ryan-high", engine="piper")
+        worker = ConversionWorker(job=job)
+
+        overall_updates = []
+        worker.overall_progress.connect(lambda p: overall_updates.append(p))
+
+        # Simulate starting file 2 of 4 (1 completed)
+        worker._parse_progress_output("Processing file 2 of 4")
+        # Now simulate 50% pv progress within file 2
+        worker._parse_progress_output("1.5MiB 0:00:05 [300KiB/s]")
+
+        # Expected: (1 completed * 100 + ~5% file progress) / 4 = ~26%
+        # The pv progress adds ~5 each time, so (100 + 5) / 4 = 26
+        assert len(overall_updates) >= 2
+        # After Processing file 2 of 4: overall = (1*100 + 0) / 4 = 25
+        assert overall_updates[0] == 25
+        # After pv progress: overall = (1*100 + 5) / 4 = 26
+        assert overall_updates[1] == 26
+
+    def test_multi_file_kokoro_blends_chunk_progress(self, qapp, tmp_path):
+        """Multi-file Kokoro: overall should blend completed files + chunk progress."""
+        files = []
+        for i in range(2):
+            f = tmp_path / f"book{i}.epub"
+            f.write_text("content")
+            files.append(f)
+
+        job = ConversionJob(files=files, voice_key="af_heart", engine="kokoro")
+        worker = ConversionWorker(job=job)
+        worker._current_file = files[0]
+        worker._job.current_file_index = 0
+
+        overall_updates = []
+        worker.overall_progress.connect(lambda p: overall_updates.append(p))
+
+        # 50% through first file of 2
+        worker._parse_progress_output("Processing chunk 5/10 \u280b")
+
+        assert len(overall_updates) >= 1
+        # (0 completed * 100 + 50) / 2 = 25
+        assert overall_updates[-1] == 25
+
+    def test_overall_progress_reaches_100_on_success(self, qapp, tmp_path):
+        """Overall progress should hit 100% when process completes successfully."""
+        test_file = tmp_path / "book.txt"
+        test_file.write_text("content")
+        job = ConversionJob(files=[test_file], voice_key="en_US-ryan-high")
+        worker = ConversionWorker(job=job)
+        worker._current_file = test_file
+
+        overall_updates = []
+        worker.overall_progress.connect(lambda p: overall_updates.append(p))
+
+        worker._on_process_finished(0)
+
+        assert overall_updates[-1] == 100
+
+
 class TestLogNoiseFiltering:
     """Tests for GUI log noise filtering in ConversionWorker."""
 

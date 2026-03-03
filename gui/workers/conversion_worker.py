@@ -265,6 +265,20 @@ class ConversionWorker(QObject):
         """Process a line of stderr output."""
         self._handle_line(line)
 
+    def _emit_overall_progress(self) -> None:
+        """Compute and emit blended overall progress.
+
+        For multi-file jobs: (completed_files * 100 + current_file_progress) / total_files
+        For single-file jobs: forward current file progress directly.
+        """
+        total = len(self._job.files)
+        if total == 0:
+            return
+
+        completed = self._job.current_file_index or 0
+        overall = int((completed * 100 + self._current_file_progress) / total)
+        self.overall_progress.emit(min(overall, 99))
+
     def _parse_progress_output(self, line: str) -> None:
         """Parse progress from subprocess output.
 
@@ -287,6 +301,7 @@ class ConversionWorker(QObject):
             self._current_file_progress = min(self._current_file_progress + 5, 95)
             if self._current_file:
                 self.progress.emit(str(self._current_file), self._current_file_progress)
+                self._emit_overall_progress()
 
         # Look for "Processing file N of M" pattern
         file_match = re.search(r"Processing file (\d+) of (\d+)", line)
@@ -295,10 +310,10 @@ class ConversionWorker(QObject):
             total = int(file_match.group(2))
             if current <= len(self._job.files):
                 self._current_file = self._job.files[current - 1]
+                self._job.current_file_index = current - 1
                 self._current_file_progress = 0
                 self.progress.emit(str(self._current_file), 0)
-                overall = int((current - 1) / total * 100)
-                self.overall_progress.emit(overall)
+                self._emit_overall_progress()
 
     def _parse_kokoro_progress(self, line: str) -> None:
         """Parse progress from Kokoro CLI output.
@@ -319,6 +334,7 @@ class ConversionWorker(QObject):
                 self._current_file_progress = percent
                 if self._current_file:
                     self.progress.emit(str(self._current_file), percent)
+                    self._emit_overall_progress()
             return
 
         # Parse total chapters count
@@ -346,9 +362,10 @@ class ConversionWorker(QObject):
 
         if success:
             self._job.status = JobStatus.COMPLETED
-            # Set file progress to 100% on success
+            # Set file and overall progress to 100% on success
             if self._current_file:
                 self.progress.emit(str(self._current_file), 100)
+            self.overall_progress.emit(100)
         else:
             self._job.status = JobStatus.FAILED
             self._job.error_message = f"Process exited with code {exit_code}"
