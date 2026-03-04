@@ -75,7 +75,8 @@ class TestSettingsPanel:
         assert panel._title_field is not None
 
     def test_voice_selector_has_installed_voices(self, panel, installed_voices):
-        """Test voice selector lists installed voices."""
+        """Test voice selector lists Piper voices when Piper is selected."""
+        panel.set_engine("piper")
         count = panel._voice_selector.count()
         assert count == len(installed_voices)
 
@@ -86,6 +87,7 @@ class TestSettingsPanel:
 
     def test_get_selected_voice_returns_voice_key(self, panel, installed_voices):
         """Test getting currently selected voice returns a voice key."""
+        panel.set_engine("piper")
         panel._voice_selector.setCurrentIndex(0)
         voice = panel.get_selected_voice()
         assert voice == installed_voices[0].key

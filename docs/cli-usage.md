@@ -5,17 +5,17 @@ The `make-audiobook` command converts documents to audiobooks using Kokoro (reco
 ## Basic Usage
 
 ```bash
-# Kokoro engine — natural-sounding, chapter-aware (recommended)
-make-audiobook mybook.epub --engine=kokoro
+# Kokoro engine (default) — natural-sounding, chapter-aware
+make-audiobook mybook.epub
 
 # Kokoro with specific voice and speed
-make-audiobook mybook.epub --engine=kokoro --voice=af_bella --speed=1.2
+make-audiobook mybook.epub --voice=af_bella --speed=1.2
 
 # Piper engine — fast, interactive voice selection
-make-audiobook mybook.txt
+make-audiobook mybook.txt --engine=piper
 
 # Batch processing
-make-audiobook chapter*.md --engine=kokoro
+make-audiobook chapter*.md
 ```
 
 ## Options
@@ -28,7 +28,7 @@ make-audiobook chapter*.md --engine=kokoro
 | `-l`, `--list-voices` | List all installed voices |
 | `-u`, `--update-voices` | Update installed Piper voices |
 | `-s=SCALE`, `--length_scale=SCALE` | Set speech speed (higher = slower). Default: 1.5 |
-| `--engine=ENGINE` | TTS engine: piper (default), kokoro, whisperspeech |
+| `--engine=ENGINE` | TTS engine: kokoro (default), piper, whisperspeech |
 | `--speed=SPEED` | Speed multiplier for Kokoro (1.0 = normal, 1.5 = faster) |
 
 ## Examples
@@ -79,20 +79,20 @@ make-audiobook mybook.txt
 Kokoro produces the most natural-sounding speech available in open-source TTS. It natively handles epub and pdf with chapter detection, and outputs MP3 directly without intermediate conversion steps.
 
 ```bash
-# Convert with Kokoro (uses default voice af_heart)
-make-audiobook mybook.epub --engine=kokoro
+# Convert with Kokoro (default engine, uses voice af_heart)
+make-audiobook mybook.epub
 
 # Specify a Kokoro voice
-make-audiobook mybook.epub --engine=kokoro --voice=af_bella
+make-audiobook mybook.epub --voice=af_bella
 
 # Adjust Kokoro speed (1.0 = normal, higher = faster)
-make-audiobook mybook.epub --engine=kokoro --speed=1.2
+make-audiobook mybook.epub --speed=1.2
 
 # Chapter-aware pdf conversion
-make-audiobook mybook.pdf --engine=kokoro --voice=bm_lewis
+make-audiobook mybook.pdf --voice=bm_lewis
 ```
 
-Kokoro has 26 built-in voices. Model files (~700 MB) are downloaded automatically on first use. Requires `kokoro-tts` and `espeak-ng` — see [Installation Guide](installation.md#kokoro-tts-engine-recommended).
+Kokoro has 26 built-in voices. Model files (~700 MB) are downloaded automatically on first use. Kokoro and its dependency `espeak-ng` are installed automatically — see [Installation Guide](installation.md#kokoro-tts-engine-default).
 
 ### Batch Processing
 
@@ -174,7 +174,7 @@ chapter01.epub → chapter01.mp3
 
 ## First Run
 
-On first run, if no Piper voices are found, the script will prompt you to run `piper-voices-setup` to download voices.
+Kokoro is the default engine and requires no voice download — its 26 voices are built in. If you switch to the Piper engine and no voices are found, the script will prompt you to run `piper-voices-setup` to download voices.
 
 ## Exit Codes
 

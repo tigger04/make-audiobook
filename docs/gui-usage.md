@@ -76,7 +76,7 @@ Supported formats: `.txt`, `.epub`, `.docx`, `.md`, `.html`, `.pdf`, `.mobi`
 
 **TTS Engine**
 - Select from the Engine dropdown:
-  - **Kokoro** (recommended) — natural-sounding TTS with 26 built-in voices and chapter-aware epub/pdf support
+  - **Kokoro** (default) — natural-sounding TTS with 26 built-in voices and chapter-aware epub/pdf support
   - **Piper** — faster processing with 100+ downloadable voices
   - **WhisperSpeech** (experimental) — research-grade TTS
 - Changing the engine updates the voice list automatically
@@ -199,7 +199,9 @@ make install-gui
 
 ### No Voices Available
 
-If the voice dropdown is empty:
+Kokoro (default engine) has 26 built-in voices and requires no download.
+
+If using the Piper engine and the voice dropdown is empty:
 1. Go to the Voices tab
 2. Click "Browse Voices..."
 3. Download at least one voice

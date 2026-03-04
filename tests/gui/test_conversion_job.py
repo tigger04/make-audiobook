@@ -123,10 +123,10 @@ class TestConversionJob:
         job = ConversionJob(files=[Path("/tmp/a.txt"), Path("/tmp/b.txt")])
         assert job.file_count == 2
 
-    def test_job_default_engine_is_piper(self):
-        """Test default engine is piper."""
+    def test_job_default_engine_is_kokoro(self):
+        """Test default engine is kokoro."""
         job = ConversionJob(files=[])
-        assert job.engine == "piper"
+        assert job.engine == "kokoro"
 
     def test_job_with_kokoro_engine(self):
         """Test ConversionJob with kokoro engine."""

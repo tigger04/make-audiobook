@@ -19,13 +19,14 @@ from gui.models.conversion_job import ConversionJob, JobStatus
 
 @pytest.fixture
 def sample_job(tmp_path):
-    """Sample conversion job."""
+    """Sample Piper conversion job."""
     test_file = tmp_path / "test.txt"
     test_file.write_text("Hello, world!")
     return ConversionJob(
         files=[test_file],
         voice_key="en_US-ryan-high",
         length_scale=1.5,
+        engine="piper",
     )
 
 
@@ -71,6 +72,7 @@ class TestConversionWorker:
             files=[test_file],
             random_voice=True,
             random_filter="medium",
+            engine="piper",
         )
         worker = ConversionWorker(job=job)
         cmd = worker._build_command()
@@ -157,7 +159,7 @@ class TestConversionWorker:
             f.write_text(f"Chapter {i}")
             files.append(f)
 
-        job = ConversionJob(files=files, voice_key="en_US-ryan-high")
+        job = ConversionJob(files=files, voice_key="en_US-ryan-high", engine="piper")
         worker = ConversionWorker(job=job)
         cmd = worker._build_command()
 
@@ -264,7 +266,7 @@ class TestConversionWorker:
             f.write_text(f"Chapter {i}")
             files.append(f)
 
-        job = ConversionJob(files=files, voice_key="en_US-ryan-high")
+        job = ConversionJob(files=files, voice_key="en_US-ryan-high", engine="piper")
         worker = ConversionWorker(job=job)
 
         overall_updates = []
@@ -283,7 +285,7 @@ class TestConversionWorker:
         for f in files:
             f.write_text("test")
 
-        job = ConversionJob(files=files, voice_key="en_US-ryan-high")
+        job = ConversionJob(files=files, voice_key="en_US-ryan-high", engine="piper")
         worker = ConversionWorker(job=job)
 
         # Simulate transitioning files

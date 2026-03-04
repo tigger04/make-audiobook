@@ -18,7 +18,7 @@ brew install --cask tigger04/tap/make-audiobook
 brew install tigger04/tap/make-audiobook
 ```
 
-The cask installs the full GUI application with all dependencies bundled. The formula installs CLI tools only (requires ffmpeg, pandoc, piper-tts, fzf, fd).
+The cask installs the full GUI application with all dependencies. The formula installs CLI tools only. Both automatically install Kokoro TTS (default engine) and Piper TTS via pipx.
 
 > **Note:** The app is not notarized. If you download the DMG manually (not via Homebrew), macOS Gatekeeper will warn "Apple could not verify...". See [GUI Usage Guide](gui-usage.md#macos-gatekeeper-warning) for workarounds.
 
@@ -118,8 +118,13 @@ chmod +x make-audiobook.AppImage
    sudo pacman -S ffmpeg pandoc fzf fd python python-pip
    ```
 
-2. Install piper-tts:
+2. Install TTS engines:
    ```bash
+   # Kokoro (default engine, requires espeak-ng)
+   sudo apt install espeak-ng
+   pipx install kokoro-tts
+
+   # Piper (alternative engine)
    pip install --user piper-tts
    # Ensure ~/.local/bin is in your PATH
    ```
@@ -183,9 +188,11 @@ Download the installer from the [releases page](https://github.com/tigger04/make
 
 ---
 
-## Kokoro TTS Engine (Recommended)
+## Kokoro TTS Engine (Default)
 
-Kokoro produces the most natural-sounding speech of any open-source TTS engine. It supports 26 built-in voices and natively handles epub/pdf with chapter detection. Model files (~700 MB total) are downloaded automatically on first use.
+Kokoro is installed automatically by `brew install`, `brew install --cask`, and `./install-dependencies`. It produces the most natural-sounding speech of any open-source TTS engine, with 26 built-in voices and native epub/pdf chapter detection. Model files (~700 MB total) are downloaded on first use.
+
+If you need to install manually:
 
 ### macOS
 
@@ -235,7 +242,7 @@ Kokoro voices are built-in and require no separate download.
 make-audiobook --help
 
 # Check dependencies
-which piper ffmpeg pandoc
+which kokoro-tts piper ffmpeg pandoc espeak-ng
 ```
 
 ### Launch GUI

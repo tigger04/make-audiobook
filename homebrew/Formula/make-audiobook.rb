@@ -2,7 +2,7 @@
 # ABOUTME: Copy this file to tigger04/homebrew-tap/Formula/ after tagging a release.
 
 class MakeAudiobook < Formula
-  desc "Convert documents to audiobooks using Piper or Kokoro TTS (CLI)"
+  desc "Convert documents to audiobooks using Kokoro or Piper TTS (CLI)"
   homepage "https://github.com/tigger04/make-audiobook"
   url "https://github.com/tigger04/make-audiobook/archive/refs/tags/v3.8.4.tar.gz"
   sha256 "620b5f0c8a2fcbd78b3314aa95ec7ec50b7bb11f4b962d15410ee4b2d521c31d"
@@ -25,18 +25,20 @@ class MakeAudiobook < Formula
   end
 
   def post_install
-    ohai "Run the following to complete setup:"
-    ohai "  pipx install piper-tts"
-    ohai "  pipx install kokoro-tts --python python3.12"
-    ohai "  piper-voices-setup"
+    python312 = Formula["python@3.12"].opt_bin/"python3.12"
+
+    ohai "Installing kokoro-tts (default engine)..."
+    system "pipx", "install", "kokoro-tts", "--python", python312.to_s
+
+    ohai "Installing piper-tts (alternative engine)..."
+    system "pipx", "install", "piper-tts"
   end
 
   def caveats
     <<~EOS
-      Complete setup by running:
-        pipx install piper-tts
-        pipx install kokoro-tts --python python3.12
-        piper-voices-setup
+      Kokoro TTS (default) and Piper TTS have been installed automatically.
+
+      For Piper voices, run: piper-voices-setup
 
       For .mobi file support, install calibre:
         brew install --cask calibre

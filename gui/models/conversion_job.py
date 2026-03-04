@@ -48,7 +48,7 @@ class ConversionJob:
     random_voice: bool = False
     random_filter: Optional[str] = None
     length_scale: float = 1.0
-    engine: str = "piper"
+    engine: str = "kokoro"
     speed: float = 1.0
     author: Optional[str] = None
     title: Optional[str] = None

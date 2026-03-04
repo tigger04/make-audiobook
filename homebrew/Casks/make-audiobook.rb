@@ -1,5 +1,5 @@
 # ABOUTME: Homebrew cask for make-audiobook GUI application.
-# ABOUTME: Copy this file to tigger04/homebrew-tap/Casks/ after building a release.
+# ABOUTME: Copy this file to tigger04/homebrew-tap/Casks/ after tagging a release.
 
 cask "make-audiobook" do
   version "3.8.4"
@@ -7,17 +7,17 @@ cask "make-audiobook" do
 
   url "https://github.com/tigger04/make-audiobook/releases/download/v#{version}/make-audiobook-#{version}.dmg"
   name "make-audiobook"
-  desc "Convert documents to audiobooks using Piper or Kokoro TTS"
+  desc "Convert documents to audiobooks using Kokoro or Piper TTS"
   homepage "https://github.com/tigger04/make-audiobook"
 
   # System dependencies installed via Homebrew
-  depends_on formula: "calibre"  # for .mobi file support
-  depends_on formula: "espeak"   # for Kokoro TTS engine (optional)
+  depends_on formula: "espeak-ng"  # required by Kokoro TTS engine
   depends_on formula: "ffmpeg"
   depends_on formula: "pandoc"
   depends_on formula: "fzf"
   depends_on formula: "fd"
   depends_on formula: "pipx"
+  depends_on formula: "python@3.12"
 
   app "make-audiobook.app"
 
@@ -26,37 +26,46 @@ cask "make-audiobook" do
   binary "#{appdir}/make-audiobook.app/Contents/Resources/scripts/piper-voices-setup"
 
   postflight do
-    # Install piper-tts via pipx (handles Python isolation)
-    ohai "Installing piper-tts..."
+    # Install kokoro-tts via pipx (default engine)
+    ohai "Installing kokoro-tts (default engine)..."
+    system_command "/opt/homebrew/bin/pipx",
+                   args: ["install", "kokoro-tts", "--python",
+                          "/opt/homebrew/opt/python@3.12/bin/python3.12"],
+                   sudo: false
+
+    # Install piper-tts via pipx (alternative engine)
+    ohai "Installing piper-tts (alternative engine)..."
     system_command "/opt/homebrew/bin/pipx",
                    args: ["install", "piper-tts"],
                    sudo: false
 
-    # Install default English voices
-    ohai "Installing default voices..."
+    # Install default English voices for Piper
+    ohai "Installing default Piper voices..."
     system_command "#{staged_path}/make-audiobook.app/Contents/Resources/scripts/piper-voices-setup",
                    sudo: false
   end
 
-  # Note: piper-tts and voices remain after uninstall.
-  # To fully remove: pipx uninstall piper-tts && rm -rf ~/.local/share/piper
+  # Note: kokoro-tts, piper-tts and voices remain after uninstall.
+  # To fully remove: pipx uninstall kokoro-tts && pipx uninstall piper-tts && rm -rf ~/.local/share/piper
 
   zap trash: [
     "~/.local/share/piper",
+    "~/.local/share/kokoro",
     "~/Library/Application Support/make-audiobook",
     "~/Library/Preferences/com.tigger04.make-audiobook.plist",
     "~/Library/Caches/make-audiobook",
   ]
 
   caveats <<~EOS
-    Default English voices have been installed automatically.
-    To update voices, run: piper-voices-setup
+    Kokoro TTS (default) and Piper TTS have been installed automatically.
+    Default Piper voices have also been installed.
 
-    For additional voices, use the GUI voice browser or visit:
+    To update Piper voices, run: piper-voices-setup
+
+    For additional Piper voices, use the GUI voice browser or visit:
       https://huggingface.co/rhasspy/piper-voices
 
-    For Kokoro TTS engine (optional, higher quality):
-      brew install espeak
-      pipx install kokoro-tts
+    For .mobi file support, install calibre:
+      brew install --cask calibre
   EOS
 end

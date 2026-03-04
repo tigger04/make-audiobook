@@ -27,8 +27,8 @@ path_additions=()
 # - ffmpeg
 # - pandoc
 # - fzf (for interactive voice selection)
-homebrew_packages=(pipx python3 ffmpeg pandoc fzf fd)
-apt_packages=(ffmpeg pandoc fzf python3 python3-pip fd-find)
+homebrew_packages=(pipx python3 ffmpeg pandoc fzf fd espeak-ng)
+apt_packages=(ffmpeg pandoc fzf python3 python3-pip fd-find espeak-ng)
 pip_packages=(piper-tts)
 
 if [[ "$_os" == "Darwin" ]]; then
@@ -107,6 +107,14 @@ if [[ "$_os" == "Darwin" ]]; then
          checkmark "$pkg is already installed."
       fi
    done
+
+   # Install kokoro-tts (default engine, requires python3.12)
+   if ! pipx list | grep -q "kokoro-tts"; then
+      info "Installing kokoro-tts (default TTS engine)..."
+      pipx install kokoro-tts --python python3.12 || warn "Failed to install kokoro-tts via pipx."
+   else
+      checkmark "kokoro-tts is already installed."
+   fi
 
 elif [[ "$_os" == "Linux" ]]; then
 

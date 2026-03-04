@@ -36,13 +36,11 @@ class TestWhisperSpeechGUIBehavior:
 
     def test_piper_voice_controls_disabled_when_whisperspeech_selected(self, settings_panel):
         """When WhisperSpeech is selected, Piper voice controls should be disabled."""
-        # Initially Piper is selected, voice controls should be enabled
-        assert settings_panel.get_selected_engine() == "piper"
-        assert settings_panel._voice_selector.isEnabled()
-        assert settings_panel._random_checkbox.isEnabled()
+        # Initially Kokoro is selected (the default)
+        assert settings_panel.get_selected_engine() == "kokoro"
 
-        # Switch to WhisperSpeech
-        settings_panel._engine_selector.setCurrentIndex(2)  # WhisperSpeech is index 2
+        # Switch to WhisperSpeech (index 2)
+        settings_panel._engine_selector.setCurrentIndex(2)
         QCoreApplication.processEvents()
 
         # Voice controls should now be disabled
@@ -54,8 +52,8 @@ class TestWhisperSpeechGUIBehavior:
 
     def test_speed_control_remains_enabled_for_whisperspeech(self, settings_panel):
         """Speed control should remain enabled for WhisperSpeech."""
-        # Switch to WhisperSpeech
-        settings_panel._engine_selector.setCurrentIndex(1)
+        # Switch to WhisperSpeech (index 2)
+        settings_panel._engine_selector.setCurrentIndex(2)
         QCoreApplication.processEvents()
 
         # Speed controls should still be enabled
@@ -64,12 +62,12 @@ class TestWhisperSpeechGUIBehavior:
 
     def test_switching_back_to_piper_reenables_controls(self, settings_panel):
         """Switching back to Piper should re-enable voice controls."""
-        # Switch to WhisperSpeech
-        settings_panel._engine_selector.setCurrentIndex(1)
+        # Switch to WhisperSpeech (index 2)
+        settings_panel._engine_selector.setCurrentIndex(2)
         QCoreApplication.processEvents()
 
-        # Switch back to Piper
-        settings_panel._engine_selector.setCurrentIndex(0)
+        # Switch back to Piper (index 1)
+        settings_panel.set_engine("piper")
         QCoreApplication.processEvents()
 
         # Voice controls should be enabled again
@@ -79,6 +77,10 @@ class TestWhisperSpeechGUIBehavior:
 
     def test_random_filter_respects_engine_selection(self, settings_panel):
         """Random filter should only be visible for Piper engine."""
+        # Switch to Piper first
+        settings_panel.set_engine("piper")
+        QCoreApplication.processEvents()
+
         # Enable random mode with Piper
         settings_panel._random_checkbox.setChecked(True)
         QCoreApplication.processEvents()
@@ -87,8 +89,8 @@ class TestWhisperSpeechGUIBehavior:
         assert settings_panel._random_filter.isVisible()
         assert settings_panel._random_filter_label.isVisible()
 
-        # Switch to WhisperSpeech
-        settings_panel._engine_selector.setCurrentIndex(1)
+        # Switch to WhisperSpeech (index 2)
+        settings_panel._engine_selector.setCurrentIndex(2)
         QCoreApplication.processEvents()
 
         # Filter should be hidden even though random is checked

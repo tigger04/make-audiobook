@@ -154,15 +154,15 @@ class TestConfig:
         """Test default config includes engine field."""
         config = get_default_config()
         assert "engine" in config
-        assert config["engine"] == "piper"
+        assert config["engine"] == "kokoro"
 
     def test_config_without_engine_gets_default(self, config_file):
-        """Test old configs without engine field get piper default."""
+        """Test old configs without engine field get kokoro default."""
         old_config = {"last_voice": "en_US-ryan-high", "speed": 1.0}
         config_file.write_text(json.dumps(old_config))
 
         result = load_config(config_file)
-        assert result["engine"] == "piper"
+        assert result["engine"] == "kokoro"
 
     def test_config_preserves_saved_engine(self, config_file):
         """Test saved engine value is preserved on load."""

@@ -97,9 +97,9 @@ class TestKokoroVoiceSwitching:
         QCoreApplication.processEvents()
         return panel
 
-    def test_piper_voices_shown_initially(self, settings_panel):
-        """Piper voices should be listed when Piper is selected."""
-        assert settings_panel._voice_selector.count() == 2
+    def test_kokoro_voices_shown_initially(self, settings_panel):
+        """Kokoro voices should be listed by default (Kokoro is the default engine)."""
+        assert settings_panel._voice_selector.count() == 26
 
     def test_kokoro_voices_shown_when_selected(self, settings_panel):
         """Kokoro voices should be listed when Kokoro engine is selected."""
@@ -176,7 +176,9 @@ class TestKokoroUIState:
 
     def test_random_filter_hidden_for_kokoro(self, settings_panel):
         """Random filter should be hidden for Kokoro."""
-        # First enable random for Piper
+        # Switch to Piper first, then enable random
+        settings_panel.set_engine("piper")
+        QCoreApplication.processEvents()
         settings_panel._random_checkbox.setChecked(True)
         QCoreApplication.processEvents()
 

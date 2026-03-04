@@ -74,14 +74,14 @@ class SettingsPanel(QWidget):
         # Set minimum width (reduced since settings now has its own column)
         self.setMinimumWidth(250)
 
-        # Engine selection group (Phase 1 - experimental)
-        engine_group = QGroupBox("TTS Engine (Experimental)")
+        # Engine selection group
+        engine_group = QGroupBox("TTS Engine")
         engine_layout = QHBoxLayout(engine_group)
 
         self._engine_selector = QComboBox()
         self._engine_selector.addItems([
-            "Piper (default)",
-            "Kokoro",
+            "Kokoro (default)",
+            "Piper",
             "WhisperSpeech (experimental)",
         ])
         self._engine_selector.setToolTip("Select text-to-speech engine")
@@ -349,8 +349,8 @@ class SettingsPanel(QWidget):
             engine: Engine name ("piper", "kokoro", or "whisperspeech")
         """
         engine_index_map = {
-            "piper": 0,
-            "kokoro": 1,
+            "kokoro": 0,
+            "piper": 1,
             "whisperspeech": 2,
         }
         index = engine_index_map.get(engine, 0)
