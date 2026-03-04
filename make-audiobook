@@ -97,7 +97,7 @@ register_for_cleanup() {
    cleanup_targets+=("$@")
 }
 
-VERSION="3.8.4"
+VERSION="3.8.5"
 
 if [[ "${1:-}" =~ ^--?[Vv](ersion)?$ ]]; then
    echo "make-audiobook $VERSION"
