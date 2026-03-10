@@ -17,7 +17,7 @@ else
 endif
 
 help:
-	@echo "make-audiobook - Convert documents to audiobooks using Piper TTS"
+	@echo "make-audiobook - Convert documents to audiobooks using Kokoro or Piper TTS"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make install        Install CLI dependencies"

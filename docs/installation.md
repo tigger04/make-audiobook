@@ -109,31 +109,30 @@ chmod +x make-audiobook.AppImage
 1. Install system dependencies:
    ```bash
    # Debian/Ubuntu
-   sudo apt install ffmpeg pandoc fzf fd-find python3 python3-pip python3-venv
+   sudo apt install ffmpeg pandoc fzf fd-find espeak-ng pipx python3 python3-venv
 
-   # Fedora
-   sudo dnf install ffmpeg pandoc fzf fd-find python3 python3-pip
+   # Fedora/RHEL
+   sudo dnf install ffmpeg pandoc fzf fd-find espeak-ng pipx python3
 
-   # Arch
-   sudo pacman -S ffmpeg pandoc fzf fd python python-pip
+   # Arch Linux
+   sudo pacman -S ffmpeg pandoc fzf fd espeak-ng python-pipx python
+
+   # Alpine
+   sudo apk add ffmpeg pandoc fzf fd espeak-ng pipx python3
    ```
 
-2. Install TTS engines:
+2. Install TTS engines via pipx:
    ```bash
-   # Kokoro (default engine, requires espeak-ng)
-   sudo apt install espeak-ng
    pipx install kokoro-tts
-
-   # Piper (alternative engine)
-   pip install --user piper-tts
-   # Ensure ~/.local/bin is in your PATH
+   pipx install piper-tts
    ```
 
 3. Clone and set up:
    ```bash
    git clone https://github.com/tigger04/make-audiobook
    cd make-audiobook
-   ./piper-voices-setup
+   ./install-dependencies   # auto-detects your package manager
+   ./piper-voices-setup     # install Piper voices
    ```
 
 4. For the GUI:
