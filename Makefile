@@ -59,9 +59,17 @@ gui: install-gui
 test: test-gui
 	@echo "All tests passed."
 
+test-one-off: install-gui
+	@echo "Running one-off tests..."
+ifdef ISSUE
+	$(PYTEST) tests/one_off/ -v -k "$(ISSUE)"
+else
+	$(PYTEST) tests/one_off/ -v
+endif
+
 test-gui: install-gui
 	@echo "Running GUI tests..."
-	$(PYTEST) tests/gui/ -v
+	$(PYTEST) tests/regression/ -v
 
 lint: install-gui
 	@echo "Running linters..."
@@ -71,7 +79,7 @@ lint: install-gui
 		echo "Ruff not installed, skipping Python linting"; \
 	fi
 	@if command -v shellcheck >/dev/null 2>&1; then \
-		shellcheck make-audiobook piper-voices-setup install-dependencies; \
+		shellcheck make-audiobook piper-voices-setup install-dependencies vocalize speak; \
 	else \
 		echo "ShellCheck not installed, skipping shell linting"; \
 	fi

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-SCRIPT_PATH = Path(__file__).parent.parent / "install-dependencies"
+SCRIPT_PATH = Path(__file__).parent.parent.parent / "install-dependencies"
 
 
 @pytest.fixture
