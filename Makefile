@@ -1,7 +1,7 @@
 # ABOUTME: Makefile for make-audiobook project.
 # ABOUTME: Provides standard targets for building, testing, and running the GUI.
 
-.PHONY: help install install-gui install-voices test test-gui gui lint clean build-macos release
+.PHONY: help install install-gui install-voices test test-cli test-gui test-one-off gui lint clean build-macos release
 
 PYTHON := python3
 VENV := .venv
@@ -24,7 +24,8 @@ help:
 	@echo "  make install-gui    Install GUI dependencies and default voices"
 	@echo "  make install-voices Install default Piper voices"
 	@echo "  make gui          Launch the GUI"
-	@echo "  make test         Run all tests"
+	@echo "  make test         Run all tests (CLI + GUI)"
+	@echo "  make test-cli     Run CLI script tests only (fast, no GUI deps)"
 	@echo "  make test-gui     Run GUI tests only"
 	@echo "  make lint         Run linters"
 	@echo "  make clean        Remove build artifacts"
@@ -56,8 +57,12 @@ gui: install-gui
 	@echo "Launching make-audiobook GUI..."
 	$(VENV_BIN)/python -m gui
 
-test: test-gui
+test: test-cli test-gui
 	@echo "All tests passed."
+
+test-cli:
+	@echo "Running CLI tests..."
+	$(PYTEST) tests/regression/test_vocalize.py tests/regression/test_speak.py tests/regression/test_install_dependencies.py -v
 
 test-one-off: install-gui
 	@echo "Running one-off tests..."
@@ -69,7 +74,7 @@ endif
 
 test-gui: install-gui
 	@echo "Running GUI tests..."
-	$(PYTEST) tests/regression/ -v
+	$(PYTEST) tests/regression/gui/ -v
 
 lint: install-gui
 	@echo "Running linters..."

@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+# ABOUTME: Converts txt or md files to mp3 using Kokoro TTS.
+# ABOUTME: Minimal pipeline: no ID3 tagging, no audiobook metadata, random voice by default.
+
+set -euo pipefail
+IFS=$'\n\t'
+
+VERSION="1.0.0"
+cmd_base="$(basename "$0")"
+
+die()  { printf '💀 %s: %s\n' "$cmd_base" "$*" >&2; exit 1; }
+info() { echo -e "🔊 $*" >&2; }
+
+usage() {
+   cat >&2 <<EOF
+Usage: $cmd_base [OPTIONS] FILE [FILE...]
+
+Convert txt or md files to mp3 using Kokoro TTS.
+Output is written alongside each input file as <basename>.mp3.
+A random Kokoro voice is used by default.
+
+Options:
+  --voice=KEY       Use a specific Kokoro voice key (e.g. af_heart, bm_lewis)
+  --speed=N         Speech speed multiplier (default: 1.0)
+  --output=PATH     Write output to PATH (single-file mode only)
+  --dry-run         Print what would be done without converting
+  -h, --help        Show this help
+  --version         Show version
+
+Kokoro voice keys:
+  af_alloy  af_aoede  af_bella  af_heart  af_jessica  af_kore
+  af_nicole af_nova   af_river  af_sarah  af_sky
+  am_adam   am_echo   am_liam   am_michael am_onyx    am_puck   am_santa
+  bf_alice  bf_emma   bf_isabella bf_lily
+  bm_daniel bm_fable  bm_george bm_lewis
+EOF
+}
+
+# All built-in Kokoro voice keys
+KOKORO_VOICES=(
+   af_alloy af_aoede af_bella af_heart af_jessica af_kore
+   af_nicole af_nova af_river af_sarah af_sky
+   am_adam am_echo am_liam am_michael am_onyx am_puck am_santa
+   bf_alice bf_emma bf_isabella bf_lily
+   bm_daniel bm_fable bm_george bm_lewis
+)
+
+KOKORO_MODEL_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/kokoro"
+KOKORO_MODEL="$KOKORO_MODEL_DIR/kokoro-v1.0.onnx"
+KOKORO_VOICES_FILE="$KOKORO_MODEL_DIR/voices-v1.0.bin"
+
+# --- Argument parsing ---
+
+voice=""
+speed="1.0"
+output=""
+dry_run=false
+source_files=()
+
+while [[ $# -gt 0 ]]; do
+   case "$1" in
+   -h|--help)
+      usage; exit 0 ;;
+   --version)
+      echo "$cmd_base $VERSION"; exit 0 ;;
+   --dry-run)
+      dry_run=true ;;
+   --voice=*)
+      voice="${1#*=}" ;;
+   --speed=*)
+      speed="${1#*=}"
+      if ! [[ $speed =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+         die "Speed must be a positive number"
+      fi ;;
+   --output=*)
+      output="${1#*=}" ;;
+   --voice|--speed|--output)
+      die "$1 requires a value, e.g. $1=af_heart" ;;
+   -*)
+      die "Unknown option: $1" ;;
+   *)
+      source_files+=("$1") ;;
+   esac
+   shift
+done
+
+if [[ ${#source_files[@]} -eq 0 ]]; then
+   usage
+   exit 1
+fi
+
+if [[ ${#source_files[@]} -gt 1 && -n "$output" ]]; then
+   die "--output can only be used with a single input file"
+fi
+
+# --- Random voice selection ---
+
+pick_random_voice() {
+   local idx=$(( RANDOM % ${#KOKORO_VOICES[@]} ))
+   echo "${KOKORO_VOICES[$idx]}"
+}
+
+# --- Dependency check (skipped in dry-run) ---
+
+check_deps() {
+   if ! command -v kokoro-tts &>/dev/null; then
+      die "kokoro-tts not found. Install: pipx install kokoro-tts --python python3.12"
+   fi
+   if ! command -v espeak-ng &>/dev/null; then
+      die "espeak-ng not found. Install: brew install espeak-ng"
+   fi
+   if [[ ! -f "$KOKORO_MODEL" ]] || [[ ! -f "$KOKORO_VOICES_FILE" ]]; then
+      die "Kokoro model files not found in $KOKORO_MODEL_DIR. Run: make-audiobook --help"
+   fi
+}
+
+# --- Convert a single file ---
+
+convert_file() {
+   local input_file="$1"
+   local selected_voice="$2"
+   local target_mp3="$3"
+
+   if $dry_run; then
+      info "dry-run: $input_file -> $target_mp3 (voice: $selected_voice, speed: $speed)"
+      return 0
+   fi
+
+   local cmd_args=(
+      kokoro-tts
+      "$input_file"
+      "$target_mp3"
+      --voice "$selected_voice"
+      --speed "$speed"
+      --format mp3
+      --model "$KOKORO_MODEL"
+      --voices "$KOKORO_VOICES_FILE"
+   )
+
+   info "$(basename "$input_file") -> $target_mp3 (voice: $selected_voice)"
+   if ! "${cmd_args[@]}"; then
+      die "kokoro-tts failed for $(basename "$input_file")"
+   fi
+   if [[ ! -f "$target_mp3" ]]; then
+      die "kokoro-tts produced no output: $target_mp3"
+   fi
+}
+
+# --- Main ---
+
+$dry_run || check_deps
+
+for source_file in "${source_files[@]}"; do
+   if [[ ! -f "$source_file" ]]; then
+      die "File not found: $source_file"
+   fi
+
+   # Validate input format
+   case "${source_file,,}" in
+      *.txt|*.md) ;;
+      *) die "Unsupported file type: $source_file (supported: .txt, .md)" ;;
+   esac
+
+   # Determine output path
+   if [[ -n "$output" ]]; then
+      target_mp3="$output"
+   else
+      local_base="${source_file%.*}"
+      target_mp3="${local_base}.mp3"
+   fi
+
+   # Select voice
+   if [[ -n "$voice" ]]; then
+      selected_voice="$voice"
+   else
+      selected_voice="$(pick_random_voice)"
+   fi
+
+   convert_file "$source_file" "$selected_voice" "$target_mp3"
+done

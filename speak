@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+# ABOUTME: Synthesises text to audio via vocalize and plays it immediately.
+# ABOUTME: Trashes the temp file after playback; prints its path to stderr beforehand.
+
+set -euo pipefail
+IFS=$'\n\t'
+
+VERSION="1.0.0"
+cmd_base="$(basename "$0")"
+cmd_dir="$(cd "$(dirname "$0")" && pwd)"
+
+die()  { printf '💀 %s: %s\n' "$cmd_base" "$*" >&2; exit 1; }
+info() { echo -e "🔊 $*" >&2; }
+
+usage() {
+   cat >&2 <<EOF
+Usage: $cmd_base [OPTIONS] [FILE]
+       echo "text" | $cmd_base [OPTIONS]
+
+Synthesise text to audio and play it immediately.
+The temp audio file path is printed to stderr before playback.
+The temp file is moved to Trash after playback (recoverable).
+
+Options:
+  --voice=KEY    Kokoro voice key (e.g. af_heart, bm_lewis); random by default
+  --speed=N      Speech speed multiplier (default: 1.0)
+  --dry-run      Print what would be done without synthesising or playing
+  -h, --help     Show this help
+  --version      Show version
+
+Players tried (in order): afplay (macOS), mpv, vlc, aplay (Linux)
+EOF
+}
+
+# --- Argument parsing ---
+
+voice_flag=""
+speed_flag=""
+dry_run=false
+source_file=""
+
+while [[ $# -gt 0 ]]; do
+   case "$1" in
+   -h|--help)
+      usage; exit 0 ;;
+   --version)
+      echo "$cmd_base $VERSION"; exit 0 ;;
+   --dry-run)
+      dry_run=true ;;
+   --voice=*)
+      voice_flag="--voice=${1#*=}" ;;
+   --speed=*)
+      speed_flag="--speed=${1#*=}" ;;
+   --voice|--speed)
+      die "$1 requires a value, e.g. $1=af_heart" ;;
+   -*)
+      die "Unknown option: $1" ;;
+   *)
+      if [[ -n "$source_file" ]]; then
+         die "Only one input file is supported"
+      fi
+      source_file="$1" ;;
+   esac
+   shift
+done
+
+# --- Player selection ---
+
+select_player() {
+   # SPEAK_PLAYER env var allows overriding player selection (useful for testing)
+   if [[ -n "${SPEAK_PLAYER:-}" ]]; then
+      if command -v "$SPEAK_PLAYER" &>/dev/null; then
+         echo "$SPEAK_PLAYER"
+         return 0
+      fi
+      printf '💀 %s: SPEAK_PLAYER=%s not found on PATH\n' "$cmd_base" "$SPEAK_PLAYER" >&2
+      return 1
+   fi
+
+   local os_name
+   os_name="$(uname -s)"
+
+   if [[ "$os_name" == "Darwin" ]] && command -v afplay &>/dev/null; then
+      echo "afplay"
+      return 0
+   fi
+
+   for player in mpv vlc aplay; do
+      if command -v "$player" &>/dev/null; then
+         echo "$player"
+         return 0
+      fi
+   done
+
+   return 1
+}
+
+# --- Determine player (always, so dry-run can report it) ---
+
+if ! player="$(select_player)"; then
+   printf '💀 %s: no audio player found. Tried: afplay, mpv, vlc, aplay\n' "$cmd_base" >&2
+   exit 1
+fi
+
+# --- Dry-run: report and exit ---
+
+if $dry_run; then
+   if [[ -n "$source_file" ]]; then
+      label="$(basename "$source_file")"
+   else
+      label="<stdin>"
+   fi
+   voice_display="${voice_flag:---voice=<random>}"
+   speed_display="${speed_flag:---speed=1.0}"
+   tmp_preview="/tmp/speak-XXXXXXXX.mp3"
+   info "dry-run: $label -> $tmp_preview ($voice_display $speed_display) | $player"
+   exit 0
+fi
+
+# --- Build vocalize args ---
+
+vocalize_cmd=("$cmd_dir/vocalize")
+[[ -n "$voice_flag" ]] && vocalize_cmd+=("$voice_flag")
+[[ -n "$speed_flag" ]] && vocalize_cmd+=("$speed_flag")
+
+# --- Handle stdin vs file ---
+
+tmp_input=""
+
+if [[ -z "$source_file" ]]; then
+   # Read from stdin into a temp file
+   tmp_input="$(mktemp /tmp/speak-XXXXXXXX.txt)"
+   cat > "$tmp_input"
+   source_file="$tmp_input"
+fi
+
+# --- Synthesise to temp mp3 ---
+
+tmp_mp3="$(mktemp /tmp/speak-XXXXXXXX.mp3)"
+# mktemp creates the file; remove it so vocalize can write it cleanly
+rm -f -- "$tmp_mp3"
+
+vocalize_cmd+=("--output=$tmp_mp3" "$source_file")
+
+if ! "${vocalize_cmd[@]}"; then
+   [[ -n "$tmp_input" ]] && rm -f -- "$tmp_input"
+   die "vocalize failed"
+fi
+
+# Print path to stderr before playback
+info "$tmp_mp3"
+
+# Clean up stdin temp if used
+[[ -n "$tmp_input" ]] && rm -f -- "$tmp_input"
+
+# --- Play ---
+
+"$player" "$tmp_mp3"
+
+# --- Trash after playback ---
+
+if command -v trash &>/dev/null; then
+   trash -- "$tmp_mp3"
+else
+   # trash not available — leave file in place; warn user
+   info "trash not found — temp file kept at $tmp_mp3"
+fi

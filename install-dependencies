@@ -275,7 +275,7 @@ install_tts_engines() {
 create_symlinks() {
     local target_dir="${HOME}/.local/bin"
     local executables
-    executables=(make-audiobook piper-voices-setup)
+    executables=(make-audiobook piper-voices-setup vocalize speak)
 
     mkdir -p "$target_dir"
 
