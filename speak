@@ -112,7 +112,7 @@ if $dry_run; then
    fi
    voice_display="${voice_flag:---voice=<random>}"
    speed_display="${speed_flag:---speed=1.0}"
-   tmp_preview="/tmp/speak-XXXXXXXX.mp3"
+   tmp_preview="$(mktemp -u /tmp/speak-XXXXXXXX).mp3"
    info "dry-run: $label -> $tmp_preview ($voice_display $speed_display) | $player"
    exit 0
 fi
@@ -129,16 +129,16 @@ tmp_input=""
 
 if [[ -z "$source_file" ]]; then
    # Read from stdin into a temp file
-   tmp_input="$(mktemp /tmp/speak-XXXXXXXX.txt)"
+   tmp_input="$(mktemp /tmp/speak-XXXXXXXX).txt"
    cat > "$tmp_input"
    source_file="$tmp_input"
 fi
 
 # --- Synthesise to temp mp3 ---
 
-tmp_mp3="$(mktemp /tmp/speak-XXXXXXXX.mp3)"
-# mktemp creates the file; remove it so vocalize can write it cleanly
-rm -f -- "$tmp_mp3"
+tmp_base="$(mktemp /tmp/speak-XXXXXXXX)"
+tmp_mp3="${tmp_base}.mp3"
+rm -f -- "$tmp_base"
 
 vocalize_cmd+=("--output=$tmp_mp3" "$source_file")
 

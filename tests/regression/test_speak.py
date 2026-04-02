@@ -75,6 +75,41 @@ class TestSpeakFlags:
 
 
 # ---------------------------------------------------------------------------
+# Temp file randomization (AC38.1, RT-38.1, RT-38.2)
+# ---------------------------------------------------------------------------
+
+
+class TestSpeakTempRandomization:
+    """Verify temp filenames are randomized, not literal XXXXXXXX."""
+
+    def _dry_run_path(self, tmpdir: str) -> str:
+        txt = Path(tmpdir) / "t.txt"
+        txt.write_text("text")
+        result = subprocess.run(
+            [str(SCRIPT_PATH), "--dry-run", str(txt)],
+            capture_output=True, text=True, timeout=10,
+        )
+        for token in result.stderr.split():
+            if token.endswith(".mp3"):
+                return token
+        return ""
+
+    def test_speak_dry_run_path_contains_no_literal_XXXXXXXX_RT38_2(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = self._dry_run_path(tmpdir)
+            assert path, "No .mp3 path found in dry-run stderr"
+            assert "XXXXXXXX" not in path
+
+    def test_speak_dry_run_paths_differ_between_invocations_RT38_1(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path1 = self._dry_run_path(tmpdir)
+            path2 = self._dry_run_path(tmpdir)
+            assert path1, "No .mp3 path in first dry-run"
+            assert path2, "No .mp3 path in second dry-run"
+            assert path1 != path2, f"Both runs produced the same path: {path1}"
+
+
+# ---------------------------------------------------------------------------
 # Dry-run: stderr path output (AC35.2, RT-35.1)
 # ---------------------------------------------------------------------------
 
